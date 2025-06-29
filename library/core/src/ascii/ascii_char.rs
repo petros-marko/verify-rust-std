@@ -625,14 +625,3 @@ impl fmt::Debug for AsciiChar {
     }
 }
 
-
-#[allow(dead_code)]
-#[cfg_attr(flux, flux::opts(check_overflow = true))]
-// #[cfg_attr(flux, flux::spec(fn(a:i32, b:i32) -> i32{v:0 <= v}))]
-fn test_abs(a:i32, b:i32) -> i32 {
-    if a > b { 
-        a - b
-    } else { 
-        b - a 
-    }
-}
