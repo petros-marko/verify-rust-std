@@ -624,4 +624,3 @@ impl fmt::Debug for AsciiChar {
         f.write_str(buf[..len].as_str())
     }
 }
-
