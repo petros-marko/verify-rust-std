@@ -1,8 +1,8 @@
 # Flux
 
 [Flux](https://flux-rs.github.io/flux) is a refinement type checker
-that can be used to prove user-defined safety properties for Rust.
-Users can write their own properties via refinement type contracts
+that can be used to prove user-defined safety properties for Rust
+code. Users can write their own properties via refinement type contracts
 (a generalization of pre- and post-conditions). Additionally, out of the
 box, Flux checks for various issues such as
 
@@ -22,13 +22,13 @@ to learn how to install and run Flux.
 
 ## Usage
 
-(Adapted from the Kani documentation; see [the Flux book](https://flux-rs.github.io/flux)
+(Adapted from the Kani documentation; see [the flux book](https://flux-rs.github.io/flux) 
 for many more examples.)
 
-Consider a Rust file `demo.rs` with a function that returns
+Consider a Rust file `demo.rs` with a function that returns 
 the absolute value of the difference between two integers.
-To *prove* that the function always returns a *non-negative* result, you write
-a Flux specification—above the function definition—that says the output
+To *prove* that the function always returns a *non-negative* result, you write 
+a flux specification --- above the function definition --- that says the output 
 is a refinement type `i32{v: 0 <= v}` denoting non-negative `i32` values.
 
 
@@ -75,6 +75,7 @@ Now, when you run `flux` you see that
 
 ```
 $ flux --crate-type=lib demo.rs
+
 error[E0999]: arithmetic operation may overflow
  --> demo.rs:9:9
   |
