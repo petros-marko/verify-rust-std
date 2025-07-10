@@ -67,6 +67,8 @@ impl const RangePattern for char {
 
     const MAX: Self = char::MAX;
 
+    #[cfg_attr(flux, flux::trusted_impl)]
+    #[cfg_attr(flux, flux::spec(fn(self: char{0 < char_to_int(self)}) -> char))]
     fn sub_one(self) -> Self {
         match char::from_u32(self as u32 - 1) {
             None => panic!("exclusive range to start of valid chars"),
