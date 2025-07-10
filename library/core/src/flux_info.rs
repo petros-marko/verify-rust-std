@@ -8,8 +8,8 @@
         16 * [>>](x, 4) == x
     }
 
-    property MaskBy15[&](x, y) {
-        [&](x, y) <= y
+    property MaskLess[&](x, y) {
+        [&](x, y) <= x && [&](x, y) <= y
     }
 }]
 const _: () = {};
