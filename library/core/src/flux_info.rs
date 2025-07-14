@@ -7,7 +7,9 @@
     property ShiftRightByFour[>>](x, y) {
         16 * [>>](x, 4) == x
     }
-
+    property ShiftLeft[<<](n, k) {
+        0 < k => n <= [<<](n, k)
+    }
     property MaskLess[&](x, y) {
         [&](x, y) <= x && [&](x, y) <= y
     }

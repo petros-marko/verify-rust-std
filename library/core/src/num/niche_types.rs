@@ -48,6 +48,7 @@ macro_rules! define_valid_range_type {
             /// # Safety
             /// Immediate language UB if `val == 0`, as it violates the validity
             /// invariant of this type.
+            #[cfg_attr(flux, flux::spec(fn (val: $int{ $low <= val && val <= $high }) -> Self))]
             #[inline]
             pub const unsafe fn new_unchecked(val: $int) -> Self {
                 // SAFETY: Caller promised that `val` is non-zero.
@@ -55,6 +56,7 @@ macro_rules! define_valid_range_type {
             }
 
             #[inline]
+            #[cfg_attr(flux, flux::spec(fn (Self) -> $int{val: $low <= val && val <= $high }))]
             pub const fn as_inner(self) -> $int {
                 // SAFETY: This is a transparent wrapper, so unwrapping it is sound
                 // (Not using `.0` due to MCP#807.)

@@ -208,14 +208,20 @@ impl Duration {
     pub const fn new(secs: u64, nanos: u32) -> Duration {
         if nanos < NANOS_PER_SEC {
             // SAFETY: nanos < NANOS_PER_SEC, therefore nanos is within the valid range
-            Duration { secs, nanos: unsafe { Nanoseconds::new_unchecked(nanos) } }
+            Duration {
+                secs,
+                nanos: unsafe { Nanoseconds::new_unchecked(nanos) },
+            }
         } else {
             let secs = secs
                 .checked_add((nanos / NANOS_PER_SEC) as u64)
                 .expect("overflow in Duration::new");
             let nanos = nanos % NANOS_PER_SEC;
             // SAFETY: nanos % NANOS_PER_SEC < NANOS_PER_SEC, therefore nanos is within the valid range
-            Duration { secs, nanos: unsafe { Nanoseconds::new_unchecked(nanos) } }
+            Duration {
+                secs,
+                nanos: unsafe { Nanoseconds::new_unchecked(nanos) },
+            }
         }
     }
 
@@ -238,7 +244,10 @@ impl Duration {
     #[ensures(|duration| duration.is_safe())]
     #[ensures(|duration| duration.secs == secs)]
     pub const fn from_secs(secs: u64) -> Duration {
-        Duration { secs, nanos: Nanoseconds::ZERO }
+        Duration {
+            secs,
+            nanos: Nanoseconds::ZERO,
+        }
     }
 
     /// Creates a new `Duration` from the specified number of milliseconds.
@@ -265,7 +274,10 @@ impl Duration {
         //         => x % 1_000 < 1_000
         let subsec_nanos = unsafe { Nanoseconds::new_unchecked(subsec_millis * NANOS_PER_MILLI) };
 
-        Duration { secs, nanos: subsec_nanos }
+        Duration {
+            secs,
+            nanos: subsec_nanos,
+        }
     }
 
     /// Creates a new `Duration` from the specified number of microseconds.
@@ -292,7 +304,10 @@ impl Duration {
         //         => x % 1_000_000 < 1_000_000
         let subsec_nanos = unsafe { Nanoseconds::new_unchecked(subsec_micros * NANOS_PER_MICRO) };
 
-        Duration { secs, nanos: subsec_nanos }
+        Duration {
+            secs,
+            nanos: subsec_nanos,
+        }
     }
 
     /// Creates a new `Duration` from the specified number of nanoseconds.
@@ -324,7 +339,10 @@ impl Duration {
         // SAFETY: x % 1_000_000_000 < 1_000_000_000
         let subsec_nanos = unsafe { Nanoseconds::new_unchecked(subsec_nanos) };
 
-        Duration { secs, nanos: subsec_nanos }
+        Duration {
+            secs,
+            nanos: subsec_nanos,
+        }
     }
 
     /// Creates a new `Duration` from the specified number of weeks.
@@ -638,7 +656,11 @@ impl Duration {
                   without modifying the original"]
     #[inline]
     pub const fn abs_diff(self, other: Duration) -> Duration {
-        if let Some(res) = self.checked_sub(other) { res } else { other.checked_sub(self).unwrap() }
+        if let Some(res) = self.checked_sub(other) {
+            res
+        } else {
+            other.checked_sub(self).unwrap()
+        }
     }
 
     /// Checked `Duration` addition. Computes `self + other`, returning [`None`]
@@ -1135,7 +1157,8 @@ impl Add for Duration {
 
     #[inline]
     fn add(self, rhs: Duration) -> Duration {
-        self.checked_add(rhs).expect("overflow when adding durations")
+        self.checked_add(rhs)
+            .expect("overflow when adding durations")
     }
 }
 
@@ -1153,7 +1176,8 @@ impl Sub for Duration {
 
     #[inline]
     fn sub(self, rhs: Duration) -> Duration {
-        self.checked_sub(rhs).expect("overflow when subtracting durations")
+        self.checked_sub(rhs)
+            .expect("overflow when subtracting durations")
     }
 }
 
@@ -1171,7 +1195,8 @@ impl Mul<u32> for Duration {
 
     #[inline]
     fn mul(self, rhs: u32) -> Duration {
-        self.checked_mul(rhs).expect("overflow when multiplying duration by scalar")
+        self.checked_mul(rhs)
+            .expect("overflow when multiplying duration by scalar")
     }
 }
 
@@ -1200,7 +1225,8 @@ impl Div<u32> for Duration {
     #[inline]
     #[track_caller]
     fn div(self, rhs: u32) -> Duration {
-        self.checked_div(rhs).expect("divide by zero error when dividing duration by scalar")
+        self.checked_div(rhs)
+            .expect("divide by zero error when dividing duration by scalar")
     }
 }
 
@@ -1219,8 +1245,9 @@ macro_rules! sum_durations {
         let mut total_nanos: u64 = 0;
 
         for entry in $iter {
-            total_secs =
-                total_secs.checked_add(entry.secs).expect("overflow in iter::sum over durations");
+            total_secs = total_secs
+                .checked_add(entry.secs)
+                .expect("overflow in iter::sum over durations");
             total_nanos = match total_nanos.checked_add(entry.nanos.as_inner() as u64) {
                 Some(n) => n,
                 None => {
@@ -1269,6 +1296,7 @@ impl fmt::Debug for Duration {
         ///
         /// A prefix and postfix may be added. The whole thing is padded
         /// to the formatter's `width`, if specified.
+        #[cfg_attr(flux, flux::trusted(reason = "modular arithmetic invariant"))]
         fn fmt_decimal(
             f: &mut fmt::Formatter<'_>,
             integer_part: u64,
@@ -1420,7 +1448,14 @@ impl fmt::Debug for Duration {
         let prefix = if f.sign_plus() { "+" } else { "" };
 
         if self.secs > 0 {
-            fmt_decimal(f, self.secs, self.nanos.as_inner(), NANOS_PER_SEC / 10, prefix, "s")
+            fmt_decimal(
+                f,
+                self.secs,
+                self.nanos.as_inner(),
+                NANOS_PER_SEC / 10,
+                prefix,
+                "s",
+            )
         } else if self.nanos.as_inner() >= NANOS_PER_MILLI {
             fmt_decimal(
                 f,
@@ -1508,7 +1543,9 @@ macro_rules! try_from_secs {
         const EXP_MASK: $bits_ty = (1 << $exp_bits) - 1;
 
         if $secs < 0.0 {
-            return Err(TryFromFloatSecsError { kind: TryFromFloatSecsErrorKind::Negative });
+            return Err(TryFromFloatSecsError {
+                kind: TryFromFloatSecsErrorKind::Negative,
+            });
         }
 
         let bits = $secs.to_bits();
@@ -1536,7 +1573,11 @@ macro_rules! try_from_secs {
             // f32 does not have enough precision to trigger the second branch
             // since it can not represent numbers between 0.999_999_940_395 and 1.0.
             let nanos = nanos + add_ns as u32;
-            if ($mant_bits == 23) || (nanos != NANOS_PER_SEC) { (0, nanos) } else { (1, 0) }
+            if ($mant_bits == 23) || (nanos != NANOS_PER_SEC) {
+                (0, nanos)
+            } else {
+                (1, 0)
+            }
         } else if exp < $mant_bits {
             let secs = u64::from(mant >> ($mant_bits - exp));
             let t = <$double_ty>::from((mant << exp) & MANT_MASK);
@@ -1567,7 +1608,9 @@ macro_rules! try_from_secs {
             let secs = u64::from(mant) << (exp - $mant_bits);
             (secs, 0)
         } else {
-            return Err(TryFromFloatSecsError { kind: TryFromFloatSecsErrorKind::OverflowOrNan });
+            return Err(TryFromFloatSecsError {
+                kind: TryFromFloatSecsErrorKind::OverflowOrNan,
+            });
         };
 
         Ok(Duration::new(secs, nanos))
