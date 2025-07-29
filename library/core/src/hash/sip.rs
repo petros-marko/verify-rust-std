@@ -53,8 +53,8 @@ struct Hasher<S: Sip> {
     length: usize, // how many bytes we've processed
     state: State,  // hash State
     tail: u64,     // unprocessed bytes le
-    #[cfg_attr(flux, flux::field(usize{v: v <= 8}))]
-    ntail: usize,  // how many bytes in tail are valid
+    // DETACH? #[cfg_attr(flux, flux::field(usize{v: v <= 8}))]
+    ntail: usize, // how many bytes in tail are valid
     _marker: PhantomData<S>,
 }
 
@@ -159,7 +159,9 @@ impl SipHasher {
     #[deprecated(since = "1.13.0", note = "use `std::hash::DefaultHasher` instead")]
     #[must_use]
     pub fn new_with_keys(key0: u64, key1: u64) -> SipHasher {
-        SipHasher(SipHasher24 { hasher: Hasher::new_with_keys(key0, key1) })
+        SipHasher(SipHasher24 {
+            hasher: Hasher::new_with_keys(key0, key1),
+        })
     }
 }
 
@@ -177,7 +179,9 @@ impl SipHasher13 {
     #[unstable(feature = "hashmap_internals", issue = "none")]
     #[deprecated(since = "1.13.0", note = "use `std::hash::DefaultHasher` instead")]
     pub fn new_with_keys(key0: u64, key1: u64) -> SipHasher13 {
-        SipHasher13 { hasher: Hasher::new_with_keys(key0, key1) }
+        SipHasher13 {
+            hasher: Hasher::new_with_keys(key0, key1),
+        }
     }
 }
 
@@ -188,7 +192,12 @@ impl<S: Sip> Hasher<S> {
             k0: key0,
             k1: key1,
             length: 0,
-            state: State { v0: 0, v1: 0, v2: 0, v3: 0 },
+            state: State {
+                v0: 0,
+                v1: 0,
+                v2: 0,
+                v3: 0,
+            },
             tail: 0,
             ntail: 0,
             _marker: PhantomData,
