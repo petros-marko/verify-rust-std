@@ -529,7 +529,7 @@ impl AsciiChar {
 
     /// Gets this ASCII character as a byte.
     #[unstable(feature = "ascii_char", issue = "110998")]
-    #[cfg_attr(flux, flux::spec(fn(Self) -> u8{v: v <= 127}))]
+    // DETACH? #[cfg_attr(flux, flux::spec(fn(Self) -> u8{v: v <= 127}))]
     #[inline]
     pub const fn to_u8(self) -> u8 {
         self as u8
@@ -615,7 +615,10 @@ impl fmt::Debug for AsciiChar {
                 let byte = self.to_u8();
                 let hi = HEX_DIGITS[usize::from(byte >> 4)];
                 let lo = HEX_DIGITS[usize::from(byte & 0xf)];
-                ([Apostrophe, Backslash, AsciiChar::SmallX, hi, lo, Apostrophe], 6)
+                (
+                    [Apostrophe, Backslash, AsciiChar::SmallX, hi, lo, Apostrophe],
+                    6,
+                )
             }
             _ => ([Apostrophe, *self, Apostrophe, Null, Null, Null], 3),
         };
