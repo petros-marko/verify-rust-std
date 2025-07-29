@@ -45,8 +45,8 @@
               _marker: PhantomData<S>,
             }
 
-            impl Hasher for Hasher<S> {
-                fn wrote(self: &mut Self, msg: &[u8]) ensures self: Self; // FLUX:mut-ref-unfolding
+            impl Hasher for hash::sip::Hasher<S> {
+                fn write(self: &mut Self, msg: &[u8]) ensures self: Self; // FLUX:mut-ref-unfolding
             }
         }
     }

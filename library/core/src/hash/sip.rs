@@ -262,7 +262,7 @@ impl<S: Sip> super::Hasher for Hasher<S> {
     // slightly slowing down compile speeds on some benchmarks. See #69152 for
     // details.
     #[inline]
-    #[cfg_attr(flux, flux::spec(fn (self: &mut Self, msg: &[u8]) ensures self: Self))] // FLUX:mut-ref-unfolding
+    // #[cfg_attr(flux, flux::spec(fn (self: &mut Self, msg: &[u8]) ensures self: Self))] // FLUX:mut-ref-unfolding
     fn write(&mut self, msg: &[u8]) {
         let length = msg.len();
         self.length += length;
