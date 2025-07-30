@@ -1282,7 +1282,6 @@ impl<'a> Sum<&'a Duration> for Duration {
 
 #[stable(feature = "duration_debug_impl", since = "1.27.0")]
 impl fmt::Debug for Duration {
-    // DETACH? #[cfg_attr(flux, flux::trusted(reason = "modular arithmetic invariant, nested"))]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         /// Formats a floating point number in decimal notation.
         ///
