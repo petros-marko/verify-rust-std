@@ -26,13 +26,6 @@
     }
 }]
 #[flux::specs {
-    mod ascii {
-        // AsciiChar is `crate::ascii::Char`
-        impl Char {
-            fn to_u8(Self) -> u8{v: v <= 127};
-        }
-    }
-
     mod hash {
         mod sip {
             struct Hasher {
@@ -44,47 +37,26 @@
               ntail: usize{v: v <= 8}, // how many bytes in tail are valid
               _marker: PhantomData<S>,
             }
-
-
         }
 
         impl BuildHasherDefault {
-            #[trusted]         // reason = https://github.com/flux-rs/flux/issues/1185
+            #[trusted]         // https://github.com/flux-rs/flux/issues/1185
             fn new() -> Self;
         }
     }
 
     impl Hasher for hash::sip::Hasher {
-        fn write(self: &mut Self, msg: &[u8]) ensures self: Self; // FLUX:mut-ref-unfolding
+        fn write(self: &mut Self, msg: &[u8]) ensures self: Self; // mut-ref-unfolding
     }
 
     impl Clone for hash::BuildHasherDefault {
-        #[trusted]         // reason = https://github.com/flux-rs/flux/issues/1185
+        #[trusted]         // https://github.com/flux-rs/flux/issues/1185
         fn clone(self: &Self) -> Self;
     }
 
     impl Debug for time::Duration {
-        #[trusted]         // reason = modular arithmetic invariant inside nested fmt_decimal
+        #[trusted]         // modular arithmetic invariant inside nested fmt_decimal
         fn fmt(self: &Self, f: &mut fmt::Formatter) -> fmt::Result;
-    }
-
-    mod pat {
-        trait RangePattern {
-            #[reft]
-            fn sub_ok(self: Self) -> bool { true }
-
-            fn sub_one(self: Self{<Self as RangePattern>::sub_ok(self)}) -> Self;
-        }
-    }
-
-    impl RangePattern for char {
-        #[reft]
-        fn sub_ok(self: char) -> bool {
-            0 < char_to_int(self)
-        }
-
-        fn sub_one(self: char{<char as RangePattern>::sub_ok(self)}) -> char;
-
     }
 }]
 const _: () = {};
