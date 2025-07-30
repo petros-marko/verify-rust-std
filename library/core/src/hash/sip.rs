@@ -176,9 +176,7 @@ impl SipHasher13 {
     #[unstable(feature = "hashmap_internals", issue = "none")]
     #[deprecated(since = "1.13.0", note = "use `std::hash::DefaultHasher` instead")]
     pub fn new_with_keys(key0: u64, key1: u64) -> SipHasher13 {
-        SipHasher13 {
-            hasher: Hasher::new_with_keys(key0, key1),
-        }
+        SipHasher13 { hasher: Hasher::new_with_keys(key0, key1) }
     }
 }
 
