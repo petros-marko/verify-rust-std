@@ -45,10 +45,27 @@
               _marker: PhantomData<S>,
             }
 
-            impl Hasher for hash::sip::Hasher<S> {
-                fn write(self: &mut Self, msg: &[u8]) ensures self: Self; // FLUX:mut-ref-unfolding
-            }
+
         }
+
+        impl BuildHasherDefault {
+            #[trusted]         // reason = https://github.com/flux-rs/flux/issues/1185
+            fn new() -> Self;
+        }
+    }
+
+    impl Hasher for hash::sip::Hasher {
+        fn write(self: &mut Self, msg: &[u8]) ensures self: Self; // FLUX:mut-ref-unfolding
+    }
+
+    impl Clone for hash::BuildHasherDefault {
+        #[trusted]         // reason = https://github.com/flux-rs/flux/issues/1185
+        fn clone(self: &Self) -> Self;
+    }
+
+    impl Debug for time::Duration {
+        #[trusted]         // reason = modular arithmetic invariant inside nested fmt_decimal
+        fn fmt(self: &Self, f: &mut fmt::Formatter) -> fmt::Result;
     }
 }]
 const _: () = {};
