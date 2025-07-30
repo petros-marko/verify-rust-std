@@ -67,5 +67,24 @@
         #[trusted]         // reason = modular arithmetic invariant inside nested fmt_decimal
         fn fmt(self: &Self, f: &mut fmt::Formatter) -> fmt::Result;
     }
+
+    mod pat {
+        trait RangePattern {
+            #[reft]
+            fn sub_ok(self: Self) -> bool { true }
+
+            fn sub_one(self: Self{<Self as RangePattern>::sub_ok(self)}) -> Self;
+        }
+    }
+
+    impl RangePattern for char {
+        #[reft]
+        fn sub_ok(self: char) -> bool {
+            0 < char_to_int(self)
+        }
+
+        fn sub_one(self: char{<char as RangePattern>::sub_ok(self)}) -> char;
+
+    }
 }]
 const _: () = {};
