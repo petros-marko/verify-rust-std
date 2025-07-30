@@ -4,6 +4,15 @@
 /// See the following link for more information on how extensible properties for primitive operations work:
 /// <https://flux-rs.github.io/flux/guide/specifications.html#extensible-properties-for-primitive-ops>
 #[flux::defs {
+
+    fn as_int(x:int) -> int {
+        x
+    }
+
+    fn char_to_int(x:char) -> int {
+        cast(x)
+    }
+
     property ShiftRightByFour[>>](x, y) {
         16 * [>>](x, 4) == x
     }
