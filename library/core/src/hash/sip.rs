@@ -158,9 +158,7 @@ impl SipHasher {
     #[deprecated(since = "1.13.0", note = "use `std::hash::DefaultHasher` instead")]
     #[must_use]
     pub fn new_with_keys(key0: u64, key1: u64) -> SipHasher {
-        SipHasher(SipHasher24 {
-            hasher: Hasher::new_with_keys(key0, key1),
-        })
+        SipHasher(SipHasher24 { hasher: Hasher::new_with_keys(key0, key1) })
     }
 }
 
@@ -191,12 +189,7 @@ impl<S: Sip> Hasher<S> {
             k0: key0,
             k1: key1,
             length: 0,
-            state: State {
-                v0: 0,
-                v1: 0,
-                v2: 0,
-                v3: 0,
-            },
+            state: State { v0: 0, v1: 0, v2: 0, v3: 0 },
             tail: 0,
             ntail: 0,
             _marker: PhantomData,
