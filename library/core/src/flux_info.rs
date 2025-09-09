@@ -29,22 +29,29 @@
     }
 
     fn to_ascii_uppercase(n: int) -> int {
-        n - cast(is_ascii_lowercase(n)) * 32
+        n - (cast(is_ascii_lowercase(n)) * 32)
     }
 
     fn to_ascii_lowercase(n: int) -> int {
-        n + cast(is_ascii_uppercase(n)) * 32
+        n + (cast(is_ascii_uppercase(n)) * 32)
     }
 
-    property A[|](x, y) {
-        let mask = cast(is_ascii_uppercase(x)) * 32;
-        is_ascii_uppercase(x) => [|](x, mask) == x + mask
+    property BitXor0[^](x, y) {
+        (y == 0) => [^](x, y) == x
     }
 
-    property B[^](x, y) {
-        let mask = cast(is_ascii_lowercase(x)) * 32;
-        is_ascii_lowercase(x) => [^](x, mask) == x - mask
+    property BitXor32[^](x, y) {
+        (is_ascii_lowercase(x) && y == 32) => [^](x, y) == x - 32
     }
+
+    property BitOr0[|](x, y) {
+        (y == 0) => [|](x, y) == x
+    }
+
+    property BitOr32[|](x, y) {
+        (is_ascii_uppercase(x) && y == 32) => [|](x, y) == x + 32
+    }
+
 }]
 #[flux::specs {
     mod hash {
@@ -76,7 +83,7 @@
     }
 
     impl Debug for time::Duration {
-        #[trusted(reason="modular arithmetic invariant inside nested fmt_decimal")]         
+        #[trusted(reason="modular arithmetic invariant inside nested fmt_decimal")]
         fn fmt(self: &Self, f: &mut fmt::Formatter) -> fmt::Result;
     }
 }]

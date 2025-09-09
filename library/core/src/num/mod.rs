@@ -541,7 +541,7 @@ impl u8 {
     #[inline]
     pub const fn to_ascii_uppercase(&self) -> u8 {
         // Toggle the 6th bit if this is a lowercase letter
-        *self ^ ((self.is_ascii_lowercase() as u8) * ASCII_CASE_MASK)
+        *self ^ (self.is_ascii_lowercase() as u8 * ASCII_CASE_MASK)
     }
 
     /// Makes a copy of the value in its ASCII lower case equivalent.
