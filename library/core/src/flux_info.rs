@@ -19,6 +19,32 @@
     property ShiftLeft[<<](n, k) {
         0 < k => n <= [<<](n, k)
     }
+
+    fn is_ascii_uppercase(n: int) -> bool {
+        cast('A') <= n && n <= cast('Z')
+    }
+
+    fn is_ascii_lowercase(n: int) -> bool {
+        cast('a') <= n && n <= cast('z')
+    }
+
+    fn to_ascii_uppercase(n: int) -> int {
+        n - cast(is_ascii_lowercase(n)) * 32
+    }
+
+    fn to_ascii_lowercase(n: int) -> int {
+        n + cast(is_ascii_uppercase(n)) * 32
+    }
+
+    property A[|](x, y) {
+        let mask = cast(is_ascii_uppercase(x)) * 32;
+        is_ascii_uppercase(x) => [|](x, mask) == x + mask
+    }
+
+    property B[^](x, y) {
+        let mask = cast(is_ascii_lowercase(x)) * 32;
+        is_ascii_lowercase(x) => [^](x, mask) == x - mask
+    }
 }]
 #[flux::specs {
     mod hash {
