@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, sync-2025-10-09]
 
 env:
   FLUX_VERSION: "6b080b32801f923bfb590ac48e729de38f829f21"
