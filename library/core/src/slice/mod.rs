@@ -115,6 +115,7 @@ impl<T> [T] {
     #[rustc_no_implicit_autorefs]
     #[inline]
     #[must_use]
+    #[cfg_attr(flux, flux::spec(fn (&[_][@n]) -> usize[n]))]
     pub const fn len(&self) -> usize {
         ptr::metadata(self)
     }
@@ -2940,6 +2941,7 @@ impl<T> [T] {
     /// ```
     #[stable(feature = "rust1", since = "1.0.0")]
     #[inline]
+    #[cfg_attr(flux, flux::sig(fn(&Self[@n], _) -> Result<usize{v: v < n}, usize>))]
     pub fn binary_search_by<'a, F>(&'a self, mut f: F) -> Result<usize, usize>
     where
         F: FnMut(&'a T) -> Ordering,

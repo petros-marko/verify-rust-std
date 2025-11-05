@@ -3,7 +3,7 @@
 
 use crate::hash;
 use crate::time;
-
+use crate::unicode;
 
 /// List of properties tracked for the result of primitive bitwise operations.
 /// See the following link for more information on how extensible properties for primitive operations work:
@@ -91,6 +91,13 @@ use crate::time;
         impl fmt::Debug for Duration {
             #[trusted(reason="modular arithmetic invariant inside nested fmt_decimal")]
             fn fmt(self: &Self, f: &mut fmt::Formatter) -> fmt::Result;
+        }
+    }
+
+    mod unicode {
+        mod unicode_data {
+            #[trusted(reason="complex lookup logic")]
+            fn bitset_search(_,_,_,_,_) -> bool requires CHUNK_SIZE > 0;
         }
     }
 }]
