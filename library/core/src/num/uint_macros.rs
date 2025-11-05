@@ -125,6 +125,7 @@ macro_rules! uint_impl {
         #[must_use = "this returns the result of the operation, \
                       without modifying the original"]
         #[inline(always)]
+        #[cfg_attr(flux, flux::spec(fn(Self[@n]) -> u32{v: v <= $BITS && (is_char(n) => 20 <= v) }))]
         pub const fn leading_zeros(self) -> u32 {
             return intrinsics::ctlz(self as $ActualT);
         }

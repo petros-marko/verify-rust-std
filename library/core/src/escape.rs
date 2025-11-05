@@ -11,6 +11,7 @@ const HEX_DIGITS: [ascii::Char; 16] = *b"0123456789abcdef".as_ascii().unwrap();
 /// Escapes a character with `\x` representation.
 ///
 /// Returns a buffer with the escaped representation and its corresponding range.
+#[cfg_attr(flux, flux::spec(fn(_) -> (_, _) requires N >= 2))]
 #[inline]
 const fn backslash<const N: usize>(a: ascii::Char) -> ([ascii::Char; N], Range<u8>) {
     const { assert!(N >= 2) };
@@ -26,6 +27,7 @@ const fn backslash<const N: usize>(a: ascii::Char) -> ([ascii::Char; N], Range<u
 /// Escapes a character with `\xNN` representation.
 ///
 /// Returns a buffer with the escaped representation and its corresponding range.
+#[cfg_attr(flux, flux::spec(fn(_) -> (_, _) requires N >= 4))]
 #[inline]
 const fn hex_escape<const N: usize>(byte: u8) -> ([ascii::Char; N], Range<u8>) {
     const { assert!(N >= 4) };
@@ -44,6 +46,7 @@ const fn hex_escape<const N: usize>(byte: u8) -> ([ascii::Char; N], Range<u8>) {
 }
 
 /// Returns a buffer with the verbatim character and its corresponding range.
+#[cfg_attr(flux, flux::spec(fn(_) -> (_, _) requires N >= 1))]
 #[inline]
 const fn verbatim<const N: usize>(a: ascii::Char) -> ([ascii::Char; N], Range<u8>) {
     const { assert!(N >= 1) };
@@ -58,6 +61,7 @@ const fn verbatim<const N: usize>(a: ascii::Char) -> ([ascii::Char; N], Range<u8
 /// Escapes an ASCII character.
 ///
 /// Returns a buffer with the escaped representation and its corresponding range.
+#[cfg_attr(flux, flux::spec(fn(_) -> (_, _) requires N >= 4))]
 const fn escape_ascii<const N: usize>(byte: u8) -> ([ascii::Char; N], Range<u8>) {
     const { assert!(N >= 4) };
 
@@ -134,6 +138,8 @@ const fn escape_ascii<const N: usize>(byte: u8) -> ([ascii::Char; N], Range<u8>)
 /// Escapes a character with `\u{NNNN}` representation.
 ///
 /// Returns a buffer with the escaped representation and its corresponding range.
+#[cfg_attr(flux, flux::opts(check_overflow="strict"))]
+#[cfg_attr(flux, flux::spec(fn(_) -> (_, _) requires N >= 10 && N < u8::MAX))]
 const fn escape_unicode<const N: usize>(c: char) -> ([ascii::Char; N], Range<u8>) {
     const { assert!(N >= 10 && N < u8::MAX as usize) };
 
@@ -211,18 +217,21 @@ impl<const N: usize, ESCAPING> EscapeIterInner<N, ESCAPING> {
         Self { data, alive, escaping: PhantomData }
     }
 
+    #[cfg_attr(flux, flux::spec(fn(_) -> _ requires N >= 2))]
     pub(crate) const fn backslash(c: ascii::Char) -> Self {
         let (escape_seq, alive) = backslash(c);
         // SAFETY: `escape_seq` contains an escape sequence in the range given by `alive`.
         unsafe { Self::new(MaybeEscapedCharacter { escape_seq }, alive) }
     }
 
+    #[cfg_attr(flux, flux::spec(fn(_) -> _ requires N >= 4))]
     pub(crate) const fn ascii(c: u8) -> Self {
         let (escape_seq, alive) = escape_ascii(c);
         // SAFETY: `escape_seq` contains an escape sequence in the range given by `alive`.
         unsafe { Self::new(MaybeEscapedCharacter { escape_seq }, alive) }
     }
 
+    #[cfg_attr(flux, flux::spec(fn(_) -> _ requires N >= 10 && N < u8::MAX))]
     pub(crate) const fn unicode(c: char) -> Self {
         let (escape_seq, alive) = escape_unicode(c);
         // SAFETY: `escape_seq` contains an escape sequence in the range given by `alive`.

@@ -54,5 +54,6 @@ include = [ "src/ascii*.rs",
             "src/bstr/*.rs",
             "src/hash/*.rs",
             "src/time.rs",
-            "src/unicode/*.rs"
+            "src/unicode/*.rs",
+            "src/escape.rs"
           ]

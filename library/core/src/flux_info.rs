@@ -41,6 +41,10 @@ use crate::unicode;
         n + (cast(is_ascii_uppercase(n)) * 32)
     }
 
+    fn is_char(n: int) -> bool {
+        0 <= n && n <= 0x10FFFF
+    }
+
     property BitXor0[^](x, y) {
         (y == 0) => [^](x, y) == x
     }
@@ -55,6 +59,10 @@ use crate::unicode;
 
     property BitOr32[|](x, y) {
         (is_ascii_uppercase(x) && y == 32) => [|](x, y) == x + 32
+    }
+
+    property BitOr1[|](x, y) {
+        (is_char(x) && y == 1) => is_char([|](x, y))
     }
 
 }]
