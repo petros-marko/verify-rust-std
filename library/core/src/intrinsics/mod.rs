@@ -400,6 +400,7 @@ pub const unsafe fn unreachable() -> !;
 #[rustc_nounwind]
 #[unstable(feature = "core_intrinsics", issue = "none")]
 #[rustc_intrinsic]
+#[cfg_attr(flux, flux::sig(fn (b: bool) ensures b))]
 pub const unsafe fn assume(b: bool) {
     if !b {
         // SAFETY: the caller must guarantee the argument is never `false`

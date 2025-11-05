@@ -789,6 +789,7 @@ macro_rules! uint_impl {
         #[must_use = "this returns the result of the operation, \
                       without modifying the original"]
         #[inline]
+        #[cfg_attr(flux, flux::spec(fn(self: Self, rhs: Self) -> Option<Self[self - rhs]>))]
         pub const fn checked_sub(self, rhs: Self) -> Option<Self> {
             // Per PR#103299, there's no advantage to the `overflowing` intrinsic
             // for *unsigned* subtraction and we just emit the manual check anyway.
