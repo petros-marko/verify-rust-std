@@ -1111,6 +1111,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// ```
     #[stable(feature = "rust1", since = "1.0.0")]
     #[cfg_attr(not(test), rustc_diagnostic_item = "vecdeque_reserve")]
+    #[cfg_attr(flux, flux::trusted(reason = "capacity change relies on extern specs"))]
     pub fn reserve(&mut self, additional: usize) {
         let new_cap = self.len.checked_add(additional).expect("capacity overflow");
         let old_cap = self.capacity();
@@ -1163,6 +1164,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// # process_data(&[1, 2, 3]).expect("why is the test harness OOMing on 12 bytes?");
     /// ```
     #[stable(feature = "try_reserve", since = "1.57.0")]
+    #[cfg_attr(flux, flux::trusted(reason = "capacity change relies on extern specs"))]
     pub fn try_reserve_exact(&mut self, additional: usize) -> Result<(), TryReserveError> {
         let new_cap =
             self.len.checked_add(additional).ok_or(TryReserveErrorKind::CapacityOverflow)?;
@@ -1211,6 +1213,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// # process_data(&[1, 2, 3]).expect("why is the test harness OOMing on 12 bytes?");
     /// ```
     #[stable(feature = "try_reserve", since = "1.57.0")]
+    #[cfg_attr(flux, flux::trusted(reason = "capacity change relies on extern specs"))]
     pub fn try_reserve(&mut self, additional: usize) -> Result<(), TryReserveError> {
         let new_cap =
             self.len.checked_add(additional).ok_or(TryReserveErrorKind::CapacityOverflow)?;
@@ -1267,6 +1270,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// assert!(buf.capacity() >= 4);
     /// ```
     #[stable(feature = "shrink_to", since = "1.56.0")]
+    #[cfg_attr(flux, flux::trusted(reason = "capacity change relies on extern specs"))]
     pub fn shrink_to(&mut self, min_capacity: usize) {
         let target_cap = min_capacity.max(self.len);
 
@@ -1377,6 +1381,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     ///
     /// `old_head` refers to the head index before `shrink_to` was called. `target_cap`
     /// is the capacity that it was trying to shrink to.
+    #[cfg_attr(flux, flux::trusted(reason = "rollback logic relies on allocator behavior"))]
     unsafe fn abort_shrink(&mut self, old_head: usize, target_cap: usize) {
         // Moral equivalent of self.head + self.len <= target_cap. Won't overflow
         // because `self.len <= target_cap`.
@@ -1430,6 +1435,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// assert_eq!(buf, [5]);
     /// ```
     #[stable(feature = "deque_extras", since = "1.16.0")]
+    #[cfg_attr(flux, flux::trusted(reason = "drop/copy logic relies on pointer reasoning"))]
     pub fn truncate(&mut self, len: usize) {
         /// Runs the destructor for all items in the slice when it gets dropped (normally or
         /// during unwinding).
@@ -1496,6 +1502,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// assert_eq!(buf.as_slices(), (&[5][..], &[][..]));
     /// ```
     #[unstable(feature = "vec_deque_truncate_front", issue = "140667")]
+    #[cfg_attr(flux, flux::trusted(reason = "drop/copy logic relies on pointer reasoning"))]
     pub fn truncate_front(&mut self, len: usize) {
         /// Runs the destructor for all items in the slice when it gets dropped (normally or
         /// during unwinding).
@@ -1732,6 +1739,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// ranges into the physical buffer, the caller must ensure that the result of
     /// calling `slice::range(range, ..len)` represents a valid range into the
     /// logical buffer, and that all elements in that range are initialized.
+    #[cfg_attr(flux, flux::trusted(reason = "wrap-around index arithmetic"))]
     fn slice_ranges<R>(&self, range: R, len: usize) -> (Range<usize>, Range<usize>)
     where
         R: RangeBounds<usize>,
@@ -1874,6 +1882,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// ```
     #[inline]
     #[stable(feature = "drain", since = "1.6.0")]
+    #[cfg_attr(flux, flux::trusted(reason = "drain relies on raw pointer invariants"))]
     pub fn drain<R>(&mut self, range: R) -> Drain<'_, T, A>
     where
         R: RangeBounds<usize>,
@@ -2072,6 +2081,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// assert_eq!(d.pop_front(), None);
     /// ```
     #[stable(feature = "rust1", since = "1.0.0")]
+    #[cfg_attr(flux, flux::trusted(reason = "updates to head/len rely on pointer invariants"))]
     pub fn pop_front(&mut self) -> Option<T> {
         if self.is_empty() {
             None
@@ -2101,6 +2111,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// assert_eq!(buf.pop_back(), Some(3));
     /// ```
     #[stable(feature = "rust1", since = "1.0.0")]
+    #[cfg_attr(flux, flux::trusted(reason = "updates to head/len rely on pointer invariants"))]
     pub fn pop_back(&mut self) -> Option<T> {
         if self.is_empty() {
             None
@@ -2189,6 +2200,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// ```
     #[unstable(feature = "push_mut", issue = "135974")]
     #[must_use = "if you don't need a reference to the value, use `VecDeque::push_front` instead"]
+    #[cfg_attr(flux, flux::trusted(reason = "capacity and index reasoning relies on pointer invariants"))]
     pub fn push_front_mut(&mut self, value: T) -> &mut T {
         if self.is_full() {
             self.grow();
@@ -2233,6 +2245,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// ```
     #[unstable(feature = "push_mut", issue = "135974")]
     #[must_use = "if you don't need a reference to the value, use `VecDeque::push_back` instead"]
+    #[cfg_attr(flux, flux::trusted(reason = "capacity and index reasoning relies on pointer invariants"))]
     pub fn push_back_mut(&mut self, value: T) -> &mut T {
         if self.is_full() {
             self.grow();
@@ -2441,6 +2454,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// ```
     #[unstable(feature = "push_mut", issue = "135974")]
     #[must_use = "if you don't need a reference to the value, use `VecDeque::insert` instead"]
+    #[cfg_attr(flux, flux::trusted(reason = "wrap/copy logic relies on pointer invariants"))]
     pub fn insert_mut(&mut self, index: usize, value: T) -> &mut T {
         assert!(index <= self.len(), "index out of bounds");
 
@@ -2493,6 +2507,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// ```
     #[stable(feature = "rust1", since = "1.0.0")]
     #[rustc_confusables("delete", "take")]
+    #[cfg_attr(flux, flux::trusted(reason = "wrap/copy logic relies on pointer invariants"))]
     pub fn remove(&mut self, index: usize) -> Option<T> {
         if self.len <= index {
             return None;
@@ -2611,6 +2626,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// ```
     #[inline]
     #[stable(feature = "append", since = "1.4.0")]
+    #[cfg_attr(flux, flux::trusted(reason = "capacity growth and copy rely on pointer invariants"))]
     pub fn append(&mut self, other: &mut Self) {
         if T::IS_ZST {
             self.len = self.len.checked_add(other.len).expect("capacity overflow");
@@ -2695,6 +2711,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// assert_eq!(buf, [3, 5]);
     /// ```
     #[stable(feature = "vec_retain_mut", since = "1.61.0")]
+    #[cfg_attr(flux, flux::trusted(reason = "swap/truncate reasoning"))]
     pub fn retain_mut<F>(&mut self, mut f: F)
     where
         F: FnMut(&mut T) -> bool,
@@ -2733,6 +2750,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     // be called in cold paths.
     // This may panic or abort
     #[inline(never)]
+    #[cfg_attr(flux, flux::trusted(reason = "capacity growth relies on allocator behavior"))]
     fn grow(&mut self) {
         // Extend or possibly remove this assertion when valid use-cases for growing the
         // buffer without it being full emerge
@@ -2837,6 +2855,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// }
     /// ```
     #[stable(feature = "deque_make_contiguous", since = "1.48.0")]
+    #[cfg_attr(flux, flux::trusted(reason = "buffer re-layout relies on raw pointer reasoning"))]
     pub fn make_contiguous(&mut self) -> &mut [T] {
         if T::IS_ZST {
             self.head = 0;
@@ -3057,6 +3076,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     // so it's sound to call here because we're calling with something
     // less than half the length, which is never above half the capacity.
 
+    #[cfg_attr(flux, flux::trusted(reason = "wrap/copy reasoning"))]
     unsafe fn rotate_left_inner(&mut self, mid: usize) {
         debug_assert!(mid * 2 <= self.len());
         unsafe {
@@ -3065,6 +3085,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
         self.head = self.to_physical_idx(mid);
     }
 
+    #[cfg_attr(flux, flux::trusted(reason = "wrap/copy reasoning"))]
     unsafe fn rotate_right_inner(&mut self, k: usize) {
         debug_assert!(k * 2 <= self.len());
         self.head = self.wrap_sub(self.head, k);
@@ -3424,6 +3445,7 @@ trait SpecExtendFromWithin {
 
 #[cfg(not(no_global_oom_handling))]
 impl<T: Clone, A: Allocator> SpecExtendFromWithin for VecDeque<T, A> {
+    #[cfg_attr(flux, flux::trusted(reason = "clone/len updates rely on raw pointer reasoning"))]
     default unsafe fn spec_extend_from_within(&mut self, src: Range<usize>) {
         let dst = self.len();
         let count = src.end - src.start;
@@ -3447,6 +3469,7 @@ impl<T: Clone, A: Allocator> SpecExtendFromWithin for VecDeque<T, A> {
         }
     }
 
+    #[cfg_attr(flux, flux::trusted(reason = "clone/len updates rely on raw pointer reasoning"))]
     default unsafe fn spec_prepend_from_within(&mut self, src: Range<usize>) {
         let dst = 0;
         let count = src.end - src.start;
@@ -3499,6 +3522,7 @@ impl<T: Clone, A: Allocator> SpecExtendFromWithin for VecDeque<T, A> {
 
 #[cfg(not(no_global_oom_handling))]
 impl<T: TrivialClone, A: Allocator> SpecExtendFromWithin for VecDeque<T, A> {
+    #[cfg_attr(flux, flux::trusted(reason = "copy/len updates rely on raw pointer reasoning"))]
     unsafe fn spec_extend_from_within(&mut self, src: Range<usize>) {
         let dst = self.len();
         let count = src.end - src.start;
@@ -3519,6 +3543,7 @@ impl<T: TrivialClone, A: Allocator> SpecExtendFromWithin for VecDeque<T, A> {
         self.len += count;
     }
 
+    #[cfg_attr(flux, flux::trusted(reason = "copy/len updates rely on raw pointer reasoning"))]
     unsafe fn spec_prepend_from_within(&mut self, src: Range<usize>) {
         let dst = 0;
         let count = src.end - src.start;
@@ -3709,6 +3734,7 @@ impl<T, A: Allocator> Extend<T> for VecDeque<T, A> {
     }
 
     #[inline]
+    #[cfg_attr(flux, flux::trusted(reason = "unchecked push relies on capacity reasoning"))]
     unsafe fn extend_one_unchecked(&mut self, item: T) {
         // SAFETY: Our preconditions ensure the space has been reserved, and `extend_reserve` is implemented correctly.
         unsafe {
@@ -3734,6 +3760,7 @@ impl<'a, T: 'a + Copy, A: Allocator> Extend<&'a T> for VecDeque<T, A> {
     }
 
     #[inline]
+    #[cfg_attr(flux, flux::trusted(reason = "unchecked push relies on capacity reasoning"))]
     unsafe fn extend_one_unchecked(&mut self, &item: &'a T) {
         // SAFETY: Our preconditions ensure the space has been reserved, and `extend_reserve` is implemented correctly.
         unsafe {
@@ -3760,6 +3787,7 @@ impl<T, A: Allocator> From<Vec<T, A>> for VecDeque<T, A> {
     /// and to not re-allocate the `Vec`'s buffer or allocate
     /// any additional memory.
     #[inline]
+    #[cfg_attr(flux, flux::trusted(reason = "raw parts conversion relies on Vec invariants"))]
     fn from(other: Vec<T, A>) -> Self {
         let (ptr, len, cap, alloc) = other.into_raw_parts_with_alloc();
         Self { head: 0, len, buf: unsafe { RawVec::from_raw_parts_in(ptr, cap, alloc) } }
@@ -3826,6 +3854,7 @@ impl<T, const N: usize> From<[T; N]> for VecDeque<T> {
     /// let deq2: VecDeque<_> = [1, 2, 3, 4].into();
     /// assert_eq!(deq1, deq2);
     /// ```
+    #[cfg_attr(flux, flux::trusted(reason = "initialization relies on raw copy and capacity"))]
     fn from(arr: [T; N]) -> Self {
         let mut deq = VecDeque::with_capacity(N);
         let arr = ManuallyDrop::new(arr);
