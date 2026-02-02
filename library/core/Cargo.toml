@@ -56,4 +56,5 @@ include = [ "src/ascii*.rs",
             "src/bstr/*.rs",
             "src/hash/*.rs",
             "src/time.rs",
+            "src/num/niche_types.rs"
           ]

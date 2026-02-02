@@ -32,4 +32,13 @@ check-cfg = [
     'cfg(no_global_oom_handling)',
     'cfg(no_rc)',
     'cfg(no_sync)',
+    'cfg(flux)'
+]
+
+[package.metadata.flux]
+enabled=true
+check_overflow="lazy"
+include=[
+    "src/raw_vec/mod.rs",
+    "src/collections/vec_deque/mod.rs"
 ]

@@ -70,7 +70,9 @@ unsafe fn new_cap<T>(cap: usize) -> Cap {
 /// `usize::MAX`. This means that you need to be careful when round-tripping this type with a
 /// `Box<[T]>`, since `capacity()` won't yield the length.
 #[allow(missing_debug_implementations)]
+#[cfg_attr(flux, flux::refined_by(cap: int))]
 pub(crate) struct RawVec<T, A: Allocator = Global> {
+    #[cfg_attr(flux, flux::field(RawVecInner<A>[cap]))]
     inner: RawVecInner<A>,
     _marker: PhantomData<T>,
 }
@@ -82,6 +84,8 @@ pub(crate) struct RawVec<T, A: Allocator = Global> {
 /// Having this separation reduces the amount of code we need to monomorphize,
 /// as most operations don't need the actual type, just its layout.
 #[allow(missing_debug_implementations)]
+#[cfg_attr(flux, flux::refined_by(cap: int))]
+#[cfg_attr(flux, flux::opaque)]
 struct RawVecInner<A: Allocator = Global> {
     ptr: Unique<u8>,
     /// Never used for ZSTs; it's `capacity()`'s responsibility to return usize::MAX in that case.
@@ -100,6 +104,7 @@ impl<T> RawVec<T, Global> {
     /// `RawVec` with capacity `usize::MAX`. Useful for implementing
     /// delayed allocation.
     #[must_use]
+    #[cfg_attr(flux, flux::spec(fn() -> Self[0]))]
     pub(crate) const fn new() -> Self {
         Self::new_in(Global)
     }
@@ -172,6 +177,7 @@ impl<T, A: Allocator> RawVec<T, A> {
     /// Like `new`, but parameterized over the choice of allocator for
     /// the returned `RawVec`.
     #[inline]
+    #[cfg_attr(flux, flux::spec(fn(alloc: A) -> Self[0]))]
     pub(crate) const fn new_in(alloc: A) -> Self {
         // Check assumption made in `current_memory`
         const { assert!(T::LAYOUT.size() % T::LAYOUT.align() == 0) };
@@ -182,6 +188,7 @@ impl<T, A: Allocator> RawVec<T, A> {
     /// allocator for the returned `RawVec`.
     #[cfg(not(no_global_oom_handling))]
     #[inline]
+    #[cfg_attr(flux, flux::spec(fn(capacity: usize, alloc: A) -> Self[capacity]))]
     pub(crate) fn with_capacity_in(capacity: usize, alloc: A) -> Self {
         Self {
             inner: RawVecInner::with_capacity_in(capacity, alloc, T::LAYOUT),
@@ -192,6 +199,7 @@ impl<T, A: Allocator> RawVec<T, A> {
     /// Like `try_with_capacity`, but parameterized over the choice of
     /// allocator for the returned `RawVec`.
     #[inline]
+    #[cfg_attr(flux, flux::spec(fn(capacity: usize, alloc: A) -> Result<Self[capacity], TryReserveError>))]
     pub(crate) fn try_with_capacity_in(capacity: usize, alloc: A) -> Result<Self, TryReserveError> {
         match RawVecInner::try_with_capacity_in(capacity, alloc, T::LAYOUT) {
             Ok(inner) => Ok(Self { inner, _marker: PhantomData }),
@@ -222,6 +230,7 @@ impl<T, A: Allocator> RawVec<T, A> {
     ///
     /// Note, that the requested capacity and `self.capacity()` could differ, as
     /// an allocator could overallocate and return a greater memory block than requested.
+    #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
     pub(crate) unsafe fn into_box(self, len: usize) -> Box<[MaybeUninit<T>], A> {
         // Sanity-check one half of the safety requirement (we cannot check the other half).
         debug_assert!(
@@ -364,6 +373,9 @@ impl<T, A: Allocator> RawVec<T, A> {
     ///
     /// Aborts on OOM.
     #[cfg(not(no_global_oom_handling))]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], len: usize, additional: usize)
+        ensures s : Self{ v : v >= len + additional }
+    ))]
     pub(crate) fn reserve_exact(&mut self, len: usize, additional: usize) {
         // SAFETY: All calls on self.inner pass T::LAYOUT as the elem_layout
         unsafe { self.inner.reserve_exact(len, additional, T::LAYOUT) }
@@ -391,6 +403,10 @@ impl<T, A: Allocator> RawVec<T, A> {
     /// Aborts on OOM.
     #[cfg(not(no_global_oom_handling))]
     #[inline]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], cap: usize)
+        requires cap <= slf
+        ensures s : Self[cap]
+    ))]
     pub(crate) fn shrink_to_fit(&mut self, cap: usize) {
         // SAFETY: All calls on self.inner pass T::LAYOUT as the elem_layout
         unsafe { self.inner.shrink_to_fit(cap, T::LAYOUT) }
@@ -407,6 +423,8 @@ unsafe impl<#[may_dangle] T, A: Allocator> Drop for RawVec<T, A> {
 
 impl<A: Allocator> RawVecInner<A> {
     #[inline]
+    #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
+    #[cfg_attr(flux, flux::spec(fn(alloc: A, align: Alignment) -> Self[0]))]
     const fn new_in(alloc: A, align: Alignment) -> Self {
         let ptr = Unique::from_non_null(NonNull::without_provenance(align.as_nonzero()));
         // `cap: 0` means "unallocated". zero-sized types are ignored.
@@ -415,6 +433,7 @@ impl<A: Allocator> RawVecInner<A> {
 
     #[cfg(not(no_global_oom_handling))]
     #[inline]
+    #[cfg_attr(flux, flux::spec(fn(capacity: usize, alloc: A, elem_layout: Layout) -> Self[capacity]))]
     fn with_capacity_in(capacity: usize, alloc: A, elem_layout: Layout) -> Self {
         match Self::try_allocate_in(capacity, AllocInit::Uninitialized, alloc, elem_layout) {
             Ok(this) => {
@@ -429,6 +448,7 @@ impl<A: Allocator> RawVecInner<A> {
     }
 
     #[inline]
+    #[cfg_attr(flux, flux::spec(fn(capacity: usize, alloc: A, elem_layout: Layout) -> Result<Self[capacity], TryReserveError>))]
     fn try_with_capacity_in(
         capacity: usize,
         alloc: A,
@@ -446,6 +466,8 @@ impl<A: Allocator> RawVecInner<A> {
         }
     }
 
+    #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
+    #[cfg_attr(flux, flux::spec(fn(capacity: usize, init: AllocInit, alloc: A, elem_layout: Layout) -> Result<Self[capacity], TryReserveError>))]
     fn try_allocate_in(
         capacity: usize,
         init: AllocInit,
@@ -485,11 +507,13 @@ impl<A: Allocator> RawVecInner<A> {
     }
 
     #[inline]
+    #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
     unsafe fn from_raw_parts_in(ptr: *mut u8, cap: Cap, alloc: A) -> Self {
         Self { ptr: unsafe { Unique::new_unchecked(ptr) }, cap, alloc }
     }
 
     #[inline]
+    #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
     unsafe fn from_nonnull_in(ptr: NonNull<u8>, cap: Cap, alloc: A) -> Self {
         Self { ptr: Unique::from(ptr), cap, alloc }
     }
@@ -500,16 +524,20 @@ impl<A: Allocator> RawVecInner<A> {
     }
 
     #[inline]
+    #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
     const fn non_null<T>(&self) -> NonNull<T> {
         self.ptr.cast().as_non_null_ptr()
     }
 
     #[inline]
+    #[cfg_attr(flux, flux::trusted(reason="opaque struct; not dealing with zero sized types yet"))]
+    #[cfg_attr(flux, flux::spec(fn(&Self[@slf], elem_size: usize) -> usize[slf]))]
     const fn capacity(&self, elem_size: usize) -> usize {
         if elem_size == 0 { usize::MAX } else { self.cap.as_inner() }
     }
 
     #[inline]
+    #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
     fn allocator(&self) -> &A {
         &self.alloc
     }
@@ -519,6 +547,7 @@ impl<A: Allocator> RawVecInner<A> {
     ///   initially construct `self`
     /// - `elem_layout`'s size must be a multiple of its alignment
     #[inline]
+    #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
     unsafe fn current_memory(&self, elem_layout: Layout) -> Option<(NonNull<u8>, Layout)> {
         if elem_layout.size() == 0 || self.cap.as_inner() == 0 {
             None
@@ -572,6 +601,7 @@ impl<A: Allocator> RawVecInner<A> {
     /// - `elem_layout`'s size must be a multiple of its alignment
     #[cfg(not(no_global_oom_handling))]
     #[inline]
+    #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
     unsafe fn grow_one(&mut self, elem_layout: Layout) {
         // SAFETY: Precondition passed to caller
         if let Err(err) = unsafe { self.grow_amortized(self.cap.as_inner(), 1, elem_layout) } {
@@ -607,6 +637,9 @@ impl<A: Allocator> RawVecInner<A> {
     ///   initially construct `self`
     /// - `elem_layout`'s size must be a multiple of its alignment
     #[cfg(not(no_global_oom_handling))]
+    #[cfg_attr(flux, flux::spec(fn(s : &mut Self[@slf], len: usize, additional: usize, elem_layout: Layout)
+        ensures s : Self{ v : v >= len + additional }
+    ))]
     unsafe fn reserve_exact(&mut self, len: usize, additional: usize, elem_layout: Layout) {
         // SAFETY: Precondition passed to caller
         if let Err(err) = unsafe { self.try_reserve_exact(len, additional, elem_layout) } {
@@ -618,6 +651,9 @@ impl<A: Allocator> RawVecInner<A> {
     /// - `elem_layout` must be valid for `self`, i.e. it must be the same `elem_layout` used to
     ///   initially construct `self`
     /// - `elem_layout`'s size must be a multiple of its alignment
+    #[cfg_attr(flux, flux::spec(fn(s : &mut Self[@slf], len: usize, additional: usize, elem_layout: Layout) -> Result<(), TryReserveError>
+        ensures s : Self { v : v >= len + additional }
+    ))]
     unsafe fn try_reserve_exact(
         &mut self,
         len: usize,
@@ -644,6 +680,10 @@ impl<A: Allocator> RawVecInner<A> {
     /// - `cap` must be less than or equal to `self.capacity(elem_layout.size())`
     #[cfg(not(no_global_oom_handling))]
     #[inline]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], cap: usize, elem_layout: Layout)
+        requires cap <= slf
+        ensures s : Self[cap]
+    ))]
     unsafe fn shrink_to_fit(&mut self, cap: usize, elem_layout: Layout) {
         if let Err(err) = unsafe { self.shrink(cap, elem_layout) } {
             handle_error(err);
@@ -651,11 +691,17 @@ impl<A: Allocator> RawVecInner<A> {
     }
 
     #[inline]
+    #[cfg_attr(flux, flux::trusted(reason="not adding extern specs yet"))]
+    #[cfg_attr(flux, flux::spec(fn(&Self[@slf], len: usize, additional: usize, elem_layout: Layout) -> bool[additional > slf - len]))]
     fn needs_to_grow(&self, len: usize, additional: usize, elem_layout: Layout) -> bool {
         additional > self.capacity(elem_layout.size()).wrapping_sub(len)
     }
 
     #[inline]
+    #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], ptr: NonNull<[u8]>, cap: usize)
+        ensures s: Self[cap]
+    ))]
     unsafe fn set_ptr_and_cap(&mut self, ptr: NonNull<[u8]>, cap: usize) {
         // Allocators currently return a `NonNull<[u8]>` whose length matches
         // the size requested. If that ever changes, the capacity here should
@@ -669,6 +715,7 @@ impl<A: Allocator> RawVecInner<A> {
     ///   initially construct `self`
     /// - `elem_layout`'s size must be a multiple of its alignment
     /// - The sum of `len` and `additional` must be greater than the current capacity
+    #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
     unsafe fn grow_amortized(
         &mut self,
         len: usize,
@@ -707,6 +754,11 @@ impl<A: Allocator> RawVecInner<A> {
     ///   initially construct `self`
     /// - `elem_layout`'s size must be a multiple of its alignment
     /// - The sum of `len` and `additional` must be greater than the current capacity
+    #[cfg_attr(flux, flux::trusted(reason="not adding extern specs yet"))]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], len: usize, additional: usize, elem_layout: Layout) -> Result<(), TryReserveError>
+        requires additional > slf - len
+        ensures s : Self[len + additional]
+    ))]
     unsafe fn grow_exact(
         &mut self,
         len: usize,
@@ -737,6 +789,7 @@ impl<A: Allocator> RawVecInner<A> {
     // not marked inline(never) since we want optimizers to be able to observe the specifics of this
     // function, see tests/codegen-llvm/vec-reserve-extend.rs.
     #[cold]
+    #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
     unsafe fn finish_grow(
         &self,
         cap: usize,
@@ -765,6 +818,10 @@ impl<A: Allocator> RawVecInner<A> {
     /// - `cap` must be less than or equal to `self.capacity(elem_layout.size())`
     #[cfg(not(no_global_oom_handling))]
     #[inline]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], cap: usize, elem_layout: Layout) -> Result<(), TryReserveError>
+        requires cap <= slf
+        ensures s : Self[cap]
+    ))]
     unsafe fn shrink(&mut self, cap: usize, elem_layout: Layout) -> Result<(), TryReserveError> {
         assert!(cap <= self.capacity(elem_layout.size()), "Tried to shrink to a larger capacity");
         // SAFETY: Just checked this isn't trying to grow
@@ -782,6 +839,10 @@ impl<A: Allocator> RawVecInner<A> {
     /// # Safety
     /// `cap <= self.capacity()`
     #[cfg(not(no_global_oom_handling))]
+    #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], cap: usize, elem_layout: Layout) -> Result<(), TryReserveError>
+        ensures s: Self[cap]
+    ))]
     unsafe fn shrink_unchecked(
         &mut self,
         cap: usize,
@@ -827,6 +888,7 @@ impl<A: Allocator> RawVecInner<A> {
     /// after this function returns.
     /// Ideally this function would take `self` by move, but it cannot because it exists to be
     /// called from a `Drop` impl.
+    #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
     unsafe fn deallocate(&mut self, elem_layout: Layout) {
         // SAFETY: Precondition passed to caller
         if let Some((ptr, layout)) = unsafe { self.current_memory(elem_layout) } {
