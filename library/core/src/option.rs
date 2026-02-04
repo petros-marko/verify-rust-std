@@ -965,6 +965,7 @@ impl<T> Option<T> {
     #[rustc_diagnostic_item = "option_expect"]
     #[rustc_allow_const_fn_unstable(const_precise_live_drops)]
     #[rustc_const_stable(feature = "const_option", since = "1.83.0")]
+    #[cfg_attr(flux, flux::spec(fn(Self, msg: &str) -> T))]
     pub const fn expect(self, msg: &str) -> T {
         match self {
             Some(val) => val,

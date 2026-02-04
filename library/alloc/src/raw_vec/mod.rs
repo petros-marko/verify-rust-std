@@ -89,6 +89,7 @@ pub(crate) struct RawVec<T, A: Allocator = Global> {
 /// as most operations don't need the actual type, just its layout.
 #[allow(missing_debug_implementations)]
 #[cfg_attr(flux, flux::refined_by(cap: int))]
+#[cfg_attr(flux, flux::invariant(cap <= isize::MAX))]
 struct RawVecInner<A: Allocator = Global> {
     ptr: Unique<u8>,
     /// Never used for ZSTs; it's `capacity()`'s responsibility to return usize::MAX in that case.
@@ -260,6 +261,7 @@ impl<T, A: Allocator> RawVec<T, A> {
     /// If the `ptr` and `capacity` come from a `RawVec` created via `alloc`, then this is
     /// guaranteed.
     #[inline]
+    #[cfg_attr(flux, flux::trusted(reason="cannot mention pointers in spec"))]
     pub(crate) unsafe fn from_raw_parts_in(ptr: *mut T, capacity: usize, alloc: A) -> Self {
         // SAFETY: Precondition passed to the caller
         unsafe {
@@ -278,6 +280,7 @@ impl<T, A: Allocator> RawVec<T, A> {
     ///
     /// See [`RawVec::from_raw_parts_in`].
     #[inline]
+    #[cfg_attr(flux, flux::trusted(reason="cannot mention pointers in spec"))]
     pub(crate) unsafe fn from_nonnull_in(ptr: NonNull<T>, capacity: usize, alloc: A) -> Self {
         // SAFETY: Precondition passed to the caller
         unsafe {
@@ -378,6 +381,7 @@ impl<T, A: Allocator> RawVec<T, A> {
     /// Aborts on OOM.
     #[cfg(not(no_global_oom_handling))]
     #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], len: usize, additional: usize)
+        requires len + additional <= isize::MAX
         ensures s : Self{ v : v >= len + additional }
     ))]
     pub(crate) fn reserve_exact(&mut self, len: usize, additional: usize) {
@@ -386,6 +390,10 @@ impl<T, A: Allocator> RawVec<T, A> {
     }
 
     /// The same as `reserve_exact`, but returns on errors instead of panicking or aborting.
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], len: usize, additional: usize) -> Result<(), TryReserveError>
+        requires len <= isize::MAX - additional
+        ensures s : Self{ v : v >= len + additional }
+    ))]
     pub(crate) fn try_reserve_exact(
         &mut self,
         len: usize,

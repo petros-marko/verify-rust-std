@@ -70,12 +70,20 @@ use core::kani;
 
 #[cfg_attr(flux, flux::defs {
 
+    fn wrping_add(a: int, b: int) -> int {
+        (a + b) % usize::MAX
+    }
+
+    fn wrping_sub(a: int, b: int) -> int {
+        (a - b) % usize::MAX
+    }
+
     fn wrp_idx(idx: int, cap: int) -> int {
         if idx >= cap { idx - cap } else { idx }
     }
 
     fn wrp_sub(idx: int, sub: int, cap: int) -> int {
-        wrp_idx(idx - sub + cap, cap)
+        wrp_idx(wrping_add(wrping_sub(idx, sub), cap), cap)
     }
 })]
 const _ : () = ();
@@ -278,7 +286,6 @@ impl<T, A: Allocator> VecDeque<T, A> {
     #[cfg_attr(flux, flux::spec(fn(&Self[@slf], idx: usize, addend: usize) -> usize{ v : v < slf.cap }
         requires idx + addend < slf.cap || idx + addend - slf.cap < slf.cap
     ))]
-    #[cfg_attr(flux, flux::trusted(reason = "not adding extern specs yet"))]
     fn wrap_add(&self, idx: usize, addend: usize) -> usize {
         wrap_index(idx.wrapping_add(addend), self.capacity())
     }
@@ -295,9 +302,8 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// index - subtrahend.
     #[inline]
     #[cfg_attr(flux, flux::spec(fn(&Self[@slf], idx: usize, sub: usize) -> usize[wrp_sub(idx, sub, slf.cap)]
-        requires idx - sub + slf.cap < slf.cap || idx - sub < slf.cap
+        requires wrping_add(wrping_sub(idx, sub), slf.cap) < slf.cap || wrping_sub(idx, sub) < slf.cap
     ))]
-    #[cfg_attr(flux, flux::trusted(reason = "not adding extern specs yet"))]
     fn wrap_sub(&self, idx: usize, subtrahend: usize) -> usize {
         wrap_index(idx.wrapping_sub(subtrahend).wrapping_add(self.capacity()), self.capacity())
     }
@@ -676,7 +682,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// just reallocated. Unsafe because it trusts old_capacity.
     #[inline]
     #[cfg_attr(flux, flux::trusted(reason = "foo"))]
-    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], old_capacity: usize) ensures s : Self{ v : v.cap == slf.cap }))]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], old_capacity: usize) ensures s : Self[slf]))]
     unsafe fn handle_capacity_increase(&mut self, old_capacity: usize) {
         let new_capacity = self.capacity();
         debug_assert!(new_capacity >= old_capacity);
@@ -1076,9 +1082,8 @@ impl<T, A: Allocator> VecDeque<T, A> {
     ///
     /// [`reserve`]: VecDeque::reserve
     #[stable(feature = "rust1", since = "1.0.0")]
-    #[cfg_attr(flux, flux::trusted(reason="not adding extern specs yet"))]
     #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], additional: usize)
-        requires slf.len <= usize::MAX - additional
+        requires slf.len <= isize::MAX - additional
         ensures s : Self{ v : v.head == slf.head && v.len == slf.len && v.cap >= slf.len + additional }
     ))]
     pub fn reserve_exact(&mut self, additional: usize) {
@@ -1164,8 +1169,11 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// # process_data(&[1, 2, 3]).expect("why is the test harness OOMing on 12 bytes?");
     /// ```
     #[stable(feature = "try_reserve", since = "1.57.0")]
-    #[cfg_attr(flux, flux::trusted(reason = "capacity change relies on extern specs"))]
-    pub fn try_reserve_exact(&mut self, additional: usize) -> Result<(), TryReserveError> {
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], additional: usize) -> Result<i32{ v : new_slf.head == slf.head && new_slf.len == slf.len && new_slf.cap >= slf.len + additional }, TryReserveError>
+        requires slf.len <= isize::MAX - additional
+        ensures s : Self[#new_slf] // { v : v.head == slf.head && v.len == slf.len && v.cap >= slf.len + additional }
+    ))]
+    pub fn try_reserve_exact(&mut self, additional: usize) -> Result<i32, TryReserveError> {
         let new_cap =
             self.len.checked_add(additional).ok_or(TryReserveErrorKind::CapacityOverflow)?;
         let old_cap = self.capacity();
@@ -1176,7 +1184,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
                 self.handle_capacity_increase(old_cap);
             }
         }
-        Ok(())
+        Ok(0)
     }
 
     /// Tries to reserve capacity for at least `additional` more elements to be inserted

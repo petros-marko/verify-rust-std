@@ -643,6 +643,8 @@ macro_rules! uint_impl {
         #[must_use = "this returns the result of the operation, \
                       without modifying the original"]
         #[inline]
+        #[cfg_attr(flux, flux::trusted(reason="in spirit this is an extern spec"))]
+        #[cfg_attr(flux, flux::spec(fn(Self[@l], Self[@r]) -> Option<Self[l + r]>))]
         pub const fn checked_add(self, rhs: Self) -> Option<Self> {
             // This used to use `overflowing_add`, but that means it ends up being
             // a `wrapping_add`, losing some optimization opportunities. Notably,
@@ -801,6 +803,8 @@ macro_rules! uint_impl {
         #[must_use = "this returns the result of the operation, \
                       without modifying the original"]
         #[inline]
+        #[cfg_attr(flux, flux::trusted(reason="in spirit this is an extern spec"))]
+        #[cfg_attr(flux, flux::spec(fn(Self[@l], Self[@r]) -> Option<Self[l - r]>))]
         pub const fn checked_sub(self, rhs: Self) -> Option<Self> {
             // Per PR#103299, there's no advantage to the `overflowing` intrinsic
             // for *unsigned* subtraction and we just emit the manual check anyway.
@@ -2320,6 +2324,8 @@ macro_rules! uint_impl {
         #[must_use = "this returns the result of the operation, \
                       without modifying the original"]
         #[inline(always)]
+        #[cfg_attr(flux, flux::trusted(reason="in spirit this is an extern spec"))]
+        #[cfg_attr(flux, flux::spec(fn(Self[@l], Self[@r]) -> Self[(l + r) % $SelfT::MAX]))]
         pub const fn wrapping_add(self, rhs: Self) -> Self {
             intrinsics::wrapping_add(self, rhs)
         }
@@ -2357,6 +2363,8 @@ macro_rules! uint_impl {
         #[must_use = "this returns the result of the operation, \
                       without modifying the original"]
         #[inline(always)]
+        #[cfg_attr(flux, flux::trusted(reason="in spirit this is an extern spec"))]
+        #[cfg_attr(flux, flux::spec(fn(Self[@l], Self[@r]) -> Self[(l - r) % $SelfT::MAX]))]
         pub const fn wrapping_sub(self, rhs: Self) -> Self {
             intrinsics::wrapping_sub(self, rhs)
         }
