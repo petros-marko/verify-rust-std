@@ -43,6 +43,10 @@ const ZERO_CAP: Cap = unsafe { Cap::new_unchecked(0) };
 /// `Cap(cap)`, except if `T` is a ZST then `Cap::ZERO`.
 ///
 /// # Safety: cap must be <= `isize::MAX`.
+#[cfg_attr(flux, flux::trusted(reason = "not dealing with zst"))]
+#[cfg_attr(flux, flux::spec(fn(cap: usize) -> Cap[cap]
+    requires cap <= isize::MAX
+))]
 unsafe fn new_cap<T>(cap: usize) -> Cap {
     if T::IS_ZST { ZERO_CAP } else { unsafe { Cap::new_unchecked(cap) } }
 }
@@ -85,7 +89,6 @@ pub(crate) struct RawVec<T, A: Allocator = Global> {
 /// as most operations don't need the actual type, just its layout.
 #[allow(missing_debug_implementations)]
 #[cfg_attr(flux, flux::refined_by(cap: int))]
-#[cfg_attr(flux, flux::opaque)]
 struct RawVecInner<A: Allocator = Global> {
     ptr: Unique<u8>,
     /// Never used for ZSTs; it's `capacity()`'s responsibility to return usize::MAX in that case.
@@ -93,6 +96,7 @@ struct RawVecInner<A: Allocator = Global> {
     /// # Safety
     ///
     /// `cap` must be in the `0..=isize::MAX` range.
+    #[cfg_attr(flux, flux::field(Cap[cap]))]
     cap: Cap,
     alloc: A,
 }

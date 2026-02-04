@@ -1387,6 +1387,7 @@ impl<T> Option<T> {
     #[inline]
     #[stable(feature = "option_deref", since = "1.40.0")]
     #[rustc_const_unstable(feature = "const_convert", issue = "143773")]
+    #[cfg_attr(flux, flux::ignore)]
     pub const fn as_deref(&self) -> Option<&T::Target>
     where
         T: [const] Deref,
@@ -1411,6 +1412,7 @@ impl<T> Option<T> {
     #[inline]
     #[stable(feature = "option_deref", since = "1.40.0")]
     #[rustc_const_unstable(feature = "const_convert", issue = "143773")]
+    #[cfg_attr(flux, flux::ignore)]
     pub const fn as_deref_mut(&mut self) -> Option<&mut T::Target>
     where
         T: [const] DerefMut,

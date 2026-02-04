@@ -57,12 +57,14 @@ use crate::pin::UnsafePinned;
 #[allow_internal_unstable(unsized_const_params)]
 macro marker_impls {
     ( $(#[$($meta:tt)*])* $Trait:ident for $({$($bounds:tt)*})? $T:ty $(, $($rest:tt)*)? ) => {
+        #[cfg_attr(flux, flux::ignore)]
         $(#[$($meta)*])* impl< $($($bounds)*)? > $Trait for $T {}
         marker_impls! { $(#[$($meta)*])* $Trait for $($($rest)*)? }
     },
     ( $(#[$($meta:tt)*])* $Trait:ident for ) => {},
 
     ( $(#[$($meta:tt)*])* unsafe $Trait:ident for $({$($bounds:tt)*})? $T:ty $(, $($rest:tt)*)? ) => {
+        #[cfg_attr(flux, flux::ignore)]
         $(#[$($meta)*])* unsafe impl< $($($bounds)*)? > $Trait for $T {}
         marker_impls! { $(#[$($meta)*])* unsafe $Trait for $($($rest)*)? }
     },

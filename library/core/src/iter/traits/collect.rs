@@ -550,6 +550,7 @@ where
 
     // Extracting these to separate functions avoid monomorphising the closures
     // for every iterator type.
+    #[cfg_attr(flux, flux::ignore)]
     fn extender<ExtendT, T>(collection: &mut ExtendT) -> impl FnMut(T) + use<'_, ExtendT, T>
     where
         ExtendT: Extend<T>,
@@ -557,6 +558,7 @@ where
         move |item| collection.extend_one(item)
     }
 
+    #[cfg_attr(flux, flux::ignore)]
     unsafe fn unchecked_extender<ExtendT, T>(
         collection: &mut ExtendT,
     ) -> impl FnMut(T) + use<'_, ExtendT, T>
