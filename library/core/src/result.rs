@@ -1043,6 +1043,7 @@ impl<T, E> Result<T, E> {
     #[inline]
     #[stable(feature = "inner_deref", since = "1.47.0")]
     #[rustc_const_unstable(feature = "const_convert", issue = "143773")]
+    #[cfg_attr(flux, flux::ignore)]
     pub const fn as_deref(&self) -> Result<&T::Target, &E>
     where
         T: [const] Deref,
@@ -1071,6 +1072,7 @@ impl<T, E> Result<T, E> {
     #[inline]
     #[stable(feature = "inner_deref", since = "1.47.0")]
     #[rustc_const_unstable(feature = "const_convert", issue = "143773")]
+    #[cfg_attr(flux, flux::ignore)]
     pub const fn as_deref_mut(&mut self) -> Result<&mut T::Target, &mut E>
     where
         T: [const] DerefMut,

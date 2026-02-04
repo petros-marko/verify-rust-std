@@ -49,6 +49,7 @@ macro_rules! tuple_impls {
             $($T)+ @
             #[unstable(feature = "adt_const_params", issue = "95174")]
             #[unstable_feature_bound(unsized_const_params)]
+            #[cfg_attr(flux, flux::ignore)]
             impl<$($T: ConstParamTy_),+> ConstParamTy_ for ($($T,)+)
             {}
         }

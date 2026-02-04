@@ -1245,6 +1245,7 @@ pub const fn variant_count<T>() -> usize {
 /// It's not on a stabilization track right now.
 #[doc(hidden)]
 #[unstable(feature = "sized_type_properties", issue = "none")]
+#[cfg_attr(flux, flux::assoc(fn is_zst(me: Self) -> bool))]
 pub trait SizedTypeProperties: Sized {
     #[doc(hidden)]
     #[unstable(feature = "sized_type_properties", issue = "none")]
@@ -1307,6 +1308,7 @@ pub trait SizedTypeProperties: Sized {
 }
 #[doc(hidden)]
 #[unstable(feature = "sized_type_properties", issue = "none")]
+#[cfg_attr(flux, flux::assoc(fn is_zst(me: T) -> bool { false }))]
 impl<T> SizedTypeProperties for T {}
 
 /// Expands to the offset in bytes of a field from the beginning of the given type.

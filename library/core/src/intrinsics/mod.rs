@@ -2381,6 +2381,7 @@ pub const fn black_box<T>(dummy: T) -> T;
 /// otherwise, that principle should not be violated.
 #[rustc_const_unstable(feature = "const_eval_select", issue = "124625")]
 #[rustc_intrinsic]
+#[cfg_attr(flux, flux::ignore)]
 pub const fn const_eval_select<ARG: Tuple, F, G, RET>(
     _arg: ARG,
     _called_in_const: F,
