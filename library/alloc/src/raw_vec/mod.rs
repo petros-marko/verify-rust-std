@@ -28,6 +28,8 @@ fn capacity_overflow() -> ! {
     panic!("capacity overflow");
 }
 
+type Unit = ();
+
 enum AllocInit {
     /// The contents of the new memory are uninitialized.
     Uninitialized,
@@ -390,9 +392,9 @@ impl<T, A: Allocator> RawVec<T, A> {
     }
 
     /// The same as `reserve_exact`, but returns on errors instead of panicking or aborting.
-    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], len: usize, additional: usize) -> Result<(), TryReserveError>
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], len: usize, additional: usize) -> Result<Unit{ v : new_self >= len + additional }, TryReserveError>
         requires len <= isize::MAX - additional
-        ensures s : Self{ v : v >= len + additional }
+        ensures s : Self[#new_self]
     ))]
     pub(crate) fn try_reserve_exact(
         &mut self,
@@ -663,8 +665,8 @@ impl<A: Allocator> RawVecInner<A> {
     /// - `elem_layout` must be valid for `self`, i.e. it must be the same `elem_layout` used to
     ///   initially construct `self`
     /// - `elem_layout`'s size must be a multiple of its alignment
-    #[cfg_attr(flux, flux::spec(fn(s : &mut Self[@slf], len: usize, additional: usize, elem_layout: Layout) -> Result<(), TryReserveError>
-        ensures s : Self { v : v >= len + additional }
+    #[cfg_attr(flux, flux::spec(fn(s : &mut Self[@slf], len: usize, additional: usize, elem_layout: Layout) -> Result<Unit{ v : new_self >= len + additional }, TryReserveError>
+        ensures s : Self[#new_self]
     ))]
     unsafe fn try_reserve_exact(
         &mut self,
