@@ -2325,7 +2325,7 @@ macro_rules! uint_impl {
                       without modifying the original"]
         #[inline(always)]
         #[cfg_attr(flux, flux::trusted(reason="in spirit this is an extern spec"))]
-        #[cfg_attr(flux, flux::spec(fn(Self[@l], Self[@r]) -> Self[(l + r) % $SelfT::MAX]))]
+        #[cfg_attr(flux, flux::spec(fn(Self[@l], Self[@r]) -> Self[(l + r) % ($SelfT::MAX + 1)]))]
         pub const fn wrapping_add(self, rhs: Self) -> Self {
             intrinsics::wrapping_add(self, rhs)
         }
@@ -2364,7 +2364,7 @@ macro_rules! uint_impl {
                       without modifying the original"]
         #[inline(always)]
         #[cfg_attr(flux, flux::trusted(reason="in spirit this is an extern spec"))]
-        #[cfg_attr(flux, flux::spec(fn(Self[@l], Self[@r]) -> Self[(l - r) % $SelfT::MAX]))]
+        #[cfg_attr(flux, flux::spec(fn(Self[@l], Self[@r]) -> Self[(l - r) % ($SelfT::MAX + 1)]))]
         pub const fn wrapping_sub(self, rhs: Self) -> Self {
             intrinsics::wrapping_sub(self, rhs)
         }

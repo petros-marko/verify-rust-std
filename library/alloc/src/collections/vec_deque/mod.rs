@@ -68,16 +68,14 @@ mod tests;
 #[cfg(kani)]
 use core::kani;
 
-type Unit = ();
-
 #[cfg_attr(flux, flux::defs {
 
     fn wrping_add(a: int, b: int) -> int {
-        (a + b) % usize::MAX
+        (a + b) % (usize::MAX + 1)
     }
 
     fn wrping_sub(a: int, b: int) -> int {
-        (a - b) % usize::MAX
+        (a - b) % (usize::MAX + 1)
     }
 
     fn wrp_idx(idx: int, cap: int) -> int {
@@ -1171,11 +1169,15 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// # process_data(&[1, 2, 3]).expect("why is the test harness OOMing on 12 bytes?");
     /// ```
     #[stable(feature = "try_reserve", since = "1.57.0")]
-    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], additional: usize) -> Result<Unit{ v : new_slf.head == slf.head && new_slf.len == slf.len && new_slf.cap >= slf.len + additional }, TryReserveError>
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], additional: usize) -> Result<
+        i32{ v : new_slf.cap >= slf.len + additional }, 
+        TryReserveError,
+    >
         requires slf.len <= isize::MAX - additional
-        ensures s : Self[#new_slf] // { v : v.head == slf.head && v.len == slf.len && v.cap >= slf.len + additional }
+        ensures s : Self[#new_slf], new_slf.head == slf.head, new_slf.len == slf.len, new_slf.cap == slf.cap || new_slf.cap >= slf.len + additional
     ))]
-    pub fn try_reserve_exact(&mut self, additional: usize) -> Result<Unit, TryReserveError> {
+    pub fn try_reserve_exact(&mut self, additional: usize) -> Result<i32, TryReserveError> {
+
         let new_cap =
             self.len.checked_add(additional).ok_or(TryReserveErrorKind::CapacityOverflow)?;
         let old_cap = self.capacity();
@@ -1186,7 +1188,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
                 self.handle_capacity_increase(old_cap);
             }
         }
-        Ok(())
+        Ok(0)
     }
 
     /// Tries to reserve capacity for at least `additional` more elements to be inserted
