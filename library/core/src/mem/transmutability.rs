@@ -88,7 +88,6 @@ use crate::marker::ConstParamTy_;
 #[rustc_deny_explicit_impl]
 #[rustc_do_not_implement_via_object]
 #[rustc_coinductive]
-#[cfg_attr(flux, flux::ignore)]
 pub unsafe trait TransmuteFrom<Src, const ASSUME: Assume = { Assume::NOTHING }>
 where
     Src: ?Sized,
@@ -127,7 +126,9 @@ where
             dst: ManuallyDrop<Dst>,
         }
 
-        let transmute = Transmute { src: ManuallyDrop::new(src) };
+        let transmute = Transmute {
+            src: ManuallyDrop::new(src),
+        };
 
         // SAFETY: It is safe to reinterpret the bits of `src` as a value of
         // type `Self`, because, by combination of invariant on this trait and
@@ -291,7 +292,6 @@ pub struct Assume {
 
 #[unstable(feature = "transmutability", issue = "99571")]
 #[unstable_feature_bound(transmutability)]
-#[cfg_attr(flux, flux::ignore)]
 impl ConstParamTy_ for Assume {}
 
 impl Assume {
@@ -299,32 +299,48 @@ impl Assume {
     /// obligations are met, and relies only upon its own analysis to (dis)prove
     /// transmutability.
     #[unstable(feature = "transmutability", issue = "99571")]
-    pub const NOTHING: Self =
-        Self { alignment: false, lifetimes: false, safety: false, validity: false };
+    pub const NOTHING: Self = Self {
+        alignment: false,
+        lifetimes: false,
+        safety: false,
+        validity: false,
+    };
 
     /// With this, [`TransmuteFrom`] assumes only that you have ensured that
     /// references in the transmuted value satisfy the alignment requirements of
     /// their referent types. See [`Assume::alignment`] for examples.
     #[unstable(feature = "transmutability", issue = "99571")]
-    pub const ALIGNMENT: Self = Self { alignment: true, ..Self::NOTHING };
+    pub const ALIGNMENT: Self = Self {
+        alignment: true,
+        ..Self::NOTHING
+    };
 
     /// With this, [`TransmuteFrom`] assumes only that you have ensured that
     /// references in the transmuted value do not outlive their referents. See
     /// [`Assume::lifetimes`] for examples.
     #[unstable(feature = "transmutability", issue = "99571")]
-    pub const LIFETIMES: Self = Self { lifetimes: true, ..Self::NOTHING };
+    pub const LIFETIMES: Self = Self {
+        lifetimes: true,
+        ..Self::NOTHING
+    };
 
     /// With this, [`TransmuteFrom`] assumes only that you have ensured that
     /// undefined behavior does not arise from using the transmuted value. See
     /// [`Assume::safety`] for examples.
     #[unstable(feature = "transmutability", issue = "99571")]
-    pub const SAFETY: Self = Self { safety: true, ..Self::NOTHING };
+    pub const SAFETY: Self = Self {
+        safety: true,
+        ..Self::NOTHING
+    };
 
     /// With this, [`TransmuteFrom`] assumes only that you have ensured that the
     /// value being transmuted is a bit-valid instance of the transmuted value.
     /// See [`Assume::validity`] for examples.
     #[unstable(feature = "transmutability", issue = "99571")]
-    pub const VALIDITY: Self = Self { validity: true, ..Self::NOTHING };
+    pub const VALIDITY: Self = Self {
+        validity: true,
+        ..Self::NOTHING
+    };
 
     /// Combine the assumptions of `self` and `other_assumptions`.
     ///
