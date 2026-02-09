@@ -43,7 +43,6 @@ const ZERO_CAP: Cap = unsafe { Cap::new_unchecked(0) };
 /// `Cap(cap)`, except if `T` is a ZST then `Cap::ZERO`.
 ///
 /// # Safety: cap must be <= `isize::MAX`.
-#[cfg_attr(flux, flux::trusted(reason = "not dealing with zst"))]
 #[cfg_attr(flux, flux::spec(fn(cap: usize) -> Cap[cap]
     requires cap <= isize::MAX
 ))]
@@ -307,6 +306,7 @@ impl<T, A: Allocator> RawVec<T, A> {
     ///
     /// This will always be `usize::MAX` if `T` is zero-sized.
     #[inline]
+    #[cfg_attr(flux, flux::spec(fn(&Self[@slf]) -> usize[slf]))]
     pub(crate) const fn capacity(&self) -> usize {
         self.inner.capacity(size_of::<T>())
     }
@@ -542,7 +542,7 @@ impl<A: Allocator> RawVecInner<A> {
     }
 
     #[inline]
-    #[cfg_attr(flux, flux::trusted(reason="opaque struct; not dealing with zero sized types yet"))]
+    #[cfg_attr(flux, flux::trusted(reason="ignoring elem_size and layout for now"))]
     #[cfg_attr(flux, flux::spec(fn(&Self[@slf], elem_size: usize) -> usize[slf]))]
     const fn capacity(&self, elem_size: usize) -> usize {
         if elem_size == 0 { usize::MAX } else { self.cap.as_inner() }
@@ -712,6 +712,7 @@ impl<A: Allocator> RawVecInner<A> {
     #[inline]
     #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
     #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], ptr: NonNull<[u8]>, cap: usize)
+        requires cap <= isize::MAX
         ensures s: Self[cap]
     ))]
     unsafe fn set_ptr_and_cap(&mut self, ptr: NonNull<[u8]>, cap: usize) {
@@ -766,7 +767,6 @@ impl<A: Allocator> RawVecInner<A> {
     ///   initially construct `self`
     /// - `elem_layout`'s size must be a multiple of its alignment
     /// - The sum of `len` and `additional` must be greater than the current capacity
-    #[cfg_attr(flux, flux::trusted(reason="not adding extern specs yet"))]
     #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], len: usize, additional: usize, elem_layout: Layout) -> Result<
         i32{ v : new_slf == len + additional },
         TryReserveError
@@ -804,7 +804,8 @@ impl<A: Allocator> RawVecInner<A> {
     // not marked inline(never) since we want optimizers to be able to observe the specifics of this
     // function, see tests/codegen-llvm/vec-reserve-extend.rs.
     #[cold]
-    #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
+    #[cfg_attr(flux, flux::trusted(reason="allocator details"))]
+    #[cfg_attr(flux, flux::spec(fn(&Self[@slf], cap: usize, elem_layout: Layout) -> Result<NonNull<[u8]>{ v : cap <= isize::MAX }, TryReserveError>))]
     unsafe fn finish_grow(
         &self,
         cap: usize,

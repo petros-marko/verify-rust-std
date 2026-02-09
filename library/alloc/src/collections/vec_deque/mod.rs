@@ -383,6 +383,10 @@ impl<T, A: Allocator> VecDeque<T, A> {
 
     /// Copies a contiguous block of memory len long from src to dst
     #[inline]
+    #[cfg_attr(flux, flux::trusted(reason="only writing to pointer"))]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], src: usize, dst: usize, len: usize)
+        ensures s : Self[slf]
+    ))]
     unsafe fn copy(&mut self, src: usize, dst: usize, len: usize) {
         debug_assert!(
             dst + len <= self.capacity(),
@@ -407,6 +411,10 @@ impl<T, A: Allocator> VecDeque<T, A> {
 
     /// Copies a contiguous block of memory len long from src to dst
     #[inline]
+    #[cfg_attr(flux, flux::trusted(reason="only writing to pointer"))]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], src: usize, dst: usize, len: usize)
+        ensures s : Self[slf]
+    ))]
     unsafe fn copy_nonoverlapping(&mut self, src: usize, dst: usize, len: usize) {
         debug_assert!(
             dst + len <= self.capacity(),
@@ -681,8 +689,10 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// Frobs the head and tail sections around to handle the fact that we
     /// just reallocated. Unsafe because it trusts old_capacity.
     #[inline]
-    #[cfg_attr(flux, flux::trusted(reason = "foo"))]
-    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], old_capacity: usize) ensures s : Self[slf]))]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], old_capacity: usize)
+        requires slf.cap >= old_capacity && (slf.head <= old_capacity) && (old_capacity == 0 || slf.head < old_capacity)
+        ensures s : Self{ v : v.head >= slf.head && v.len == slf.len && v.cap == slf.cap }
+    ))]
     unsafe fn handle_capacity_increase(&mut self, old_capacity: usize) {
         let new_capacity = self.capacity();
         debug_assert!(new_capacity >= old_capacity);
@@ -1053,7 +1063,6 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// ```
     #[inline]
     #[stable(feature = "rust1", since = "1.0.0")]
-    #[cfg_attr(flux, flux::trusted(reason="not dealing with zero width types yet"))]
     #[cfg_attr(flux, flux::spec(fn(&Self[@slf]) -> usize[slf.cap]))]
     pub fn capacity(&self) -> usize {
         if T::IS_ZST { usize::MAX } else { self.buf.capacity() }
@@ -1084,7 +1093,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     #[stable(feature = "rust1", since = "1.0.0")]
     #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], additional: usize)
         requires slf.len <= isize::MAX - additional
-        ensures s : Self{ v : v.head == slf.head && v.len == slf.len && v.cap >= slf.len + additional }
+        ensures s : Self{ v : v.head >= slf.head && v.len == slf.len && v.cap >= slf.len + additional }
     ))]
     pub fn reserve_exact(&mut self, additional: usize) {
         let new_cap = self.len.checked_add(additional).expect("capacity overflow");
@@ -1174,7 +1183,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
         TryReserveError,
     >
         requires slf.len <= isize::MAX - additional
-        ensures s : Self[#new_slf], new_slf.head == slf.head, new_slf.len == slf.len, new_slf.cap == slf.cap || new_slf.cap >= slf.len + additional
+        ensures s : Self[#new_slf], new_slf.head >= slf.head, new_slf.len == slf.len, new_slf.cap == slf.cap || new_slf.cap >= slf.len + additional
     ))]
     pub fn try_reserve_exact(&mut self, additional: usize) -> Result<i32, TryReserveError> {
 

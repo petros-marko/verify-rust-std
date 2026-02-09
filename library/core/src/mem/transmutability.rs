@@ -88,6 +88,7 @@ use crate::marker::ConstParamTy_;
 #[rustc_deny_explicit_impl]
 #[rustc_do_not_implement_via_object]
 #[rustc_coinductive]
+#[cfg_attr(flux, flux::ignore)]
 pub unsafe trait TransmuteFrom<Src, const ASSUME: Assume = { Assume::NOTHING }>
 where
     Src: ?Sized,
@@ -292,6 +293,7 @@ pub struct Assume {
 
 #[unstable(feature = "transmutability", issue = "99571")]
 #[unstable_feature_bound(transmutability)]
+#[cfg_attr(flux, flux::ignore)]
 impl ConstParamTy_ for Assume {}
 
 impl Assume {
