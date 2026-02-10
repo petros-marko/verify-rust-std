@@ -1364,7 +1364,8 @@ impl<T, A: Allocator> Vec<T, A> {
     /// ```
     #[stable(feature = "try_reserve", since = "1.57.0")]
     pub fn try_reserve(&mut self, additional: usize) -> Result<(), TryReserveError> {
-        self.buf.try_reserve(self.len, additional)
+        self.buf.try_reserve(self.len, additional)?;
+        Ok(())
     }
 
     /// Tries to reserve the minimum capacity for at least `additional`

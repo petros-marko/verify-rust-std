@@ -320,7 +320,10 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// - Ranges must be in bounds of the logical buffer: `src + count <= self.capacity()` and `dst + count <= self.capacity()`.
     /// - `head` must be in bounds: `head < self.capacity()`.
     #[cfg(not(no_global_oom_handling))]
-    #[cfg_attr(flux, flux::trusted(reason= "foo"))]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], src: usize, dst: usize, count: usize, head: usize) -> [(_, _, usize); 2]
+        requires (src - dst >= count && dst - src >= count), (src + count <= slf.cap && dst + count <= slf.cap), head < slf.cap
+        ensures s : Self[slf]
+    ))]
     unsafe fn nonoverlapping_ranges(
         &mut self,
         src: usize,
@@ -383,7 +386,6 @@ impl<T, A: Allocator> VecDeque<T, A> {
 
     /// Copies a contiguous block of memory len long from src to dst
     #[inline]
-    #[cfg_attr(flux, flux::trusted(reason="only writing to pointer"))]
     #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], src: usize, dst: usize, len: usize)
         ensures s : Self[slf]
     ))]
@@ -411,7 +413,6 @@ impl<T, A: Allocator> VecDeque<T, A> {
 
     /// Copies a contiguous block of memory len long from src to dst
     #[inline]
-    #[cfg_attr(flux, flux::trusted(reason="only writing to pointer"))]
     #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], src: usize, dst: usize, len: usize)
         ensures s : Self[slf]
     ))]
@@ -440,7 +441,10 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// Copies a potentially wrapping block of memory len long from src to dest.
     /// (abs(dst - src) + len) must be no larger than capacity() (There must be at
     /// most one continuous overlapping region between src and dest).
-    #[cfg_attr(flux, flux::trusted(reason = "foo"))]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], src: usize, dst: usize, len: usize)
+        requires dst - src + len <= slf.cap && src - dst + len <= slf.cap
+        ensures s : Self[slf]
+    ))]
     unsafe fn wrap_copy(&mut self, src: usize, dst: usize, len: usize) {
         debug_assert!(
             cmp::min(src.abs_diff(dst), self.capacity() - src.abs_diff(dst)) + len
@@ -627,7 +631,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// Assumes no wrapping around happens.
     /// Assumes capacity is sufficient.
     #[inline]
-    #[cfg_attr(flux, flux::trusted(reason = "foo"))]
+    #[cfg_attr(flux, flux::trusted(reason = "iterator"))]
     unsafe fn write_iter(
         &mut self,
         dst: usize,
@@ -648,7 +652,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     ///
     /// Assumes that `iter` yields at most `len` items.
     /// Assumes capacity is sufficient.
-    #[cfg_attr(flux, flux::trusted(reason="foo"))]
+    #[cfg_attr(flux, flux::trusted(reason="iterator"))]
     unsafe fn write_iter_wrapping(
         &mut self,
         dst: usize,
@@ -938,7 +942,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// `initialized.start` ≤ `initialized.end` ≤ `capacity`.
     #[inline]
     #[cfg(not(test))]
-    #[cfg_attr(flux, flux::trusted(reason="pointer"))]
+    #[cfg_attr(flux, flux::trusted(reason="pointer & range"))]
     pub(crate) unsafe fn from_contiguous_raw_parts_in(
         ptr: *mut T,
         initialized: Range<usize>,
@@ -1237,8 +1241,14 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// # process_data(&[1, 2, 3]).expect("why is the test harness OOMing on 12 bytes?");
     /// ```
     #[stable(feature = "try_reserve", since = "1.57.0")]
-    #[cfg_attr(flux, flux::trusted(reason = "capacity change relies on extern specs"))]
-    pub fn try_reserve(&mut self, additional: usize) -> Result<(), TryReserveError> {
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], additional: usize) -> Result<
+        i32{ v : new_slf.cap >= slf.len + additional }, 
+        TryReserveError,
+    >
+        requires slf.len <= isize::MAX - additional
+        ensures s : Self[#new_slf], new_slf.head >= slf.head, new_slf.len == slf.len, new_slf.cap == slf.cap || new_slf.cap >= slf.len + additional
+    ))]
+    pub fn try_reserve(&mut self, additional: usize) -> Result<i32, TryReserveError> {
         let new_cap =
             self.len.checked_add(additional).ok_or(TryReserveErrorKind::CapacityOverflow)?;
         let old_cap = self.capacity();
@@ -1249,7 +1259,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
                 self.handle_capacity_increase(old_cap);
             }
         }
-        Ok(())
+        Ok(0)
     }
 
     /// Shrinks the capacity of the deque as much as possible.

@@ -359,11 +359,15 @@ impl<T, A: Allocator> RawVec<T, A> {
     }
 
     /// The same as `reserve`, but returns on errors instead of panicking or aborting.
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], len: usize, additional: usize) -> Result<i32{ v : new_self >= len + additional }, TryReserveError>
+        requires len <= isize::MAX - additional
+        ensures s : Self[#new_self], new_self == slf || new_self >= len + additional
+    ))]
     pub(crate) fn try_reserve(
         &mut self,
         len: usize,
         additional: usize,
-    ) -> Result<(), TryReserveError> {
+    ) -> Result<i32, TryReserveError> {
         // SAFETY: All calls on self.inner pass T::LAYOUT as the elem_layout
         unsafe { self.inner.try_reserve(len, additional, T::LAYOUT) }
     }
@@ -638,12 +642,15 @@ impl<A: Allocator> RawVecInner<A> {
     /// - `elem_layout` must be valid for `self`, i.e. it must be the same `elem_layout` used to
     ///   initially construct `self`
     /// - `elem_layout`'s size must be a multiple of its alignment
+    #[cfg_attr(flux, flux::spec(fn(s : &mut Self[@slf], len: usize, additional: usize, elem_layout: Layout) -> Result<i32{ v : new_self >= len + additional }, TryReserveError>
+        ensures s : Self[#new_self], new_self == slf || new_self >= len + additional
+    ))]
     unsafe fn try_reserve(
         &mut self,
         len: usize,
         additional: usize,
         elem_layout: Layout,
-    ) -> Result<(), TryReserveError> {
+    ) -> Result<i32, TryReserveError> {
         if self.needs_to_grow(len, additional, elem_layout) {
             // SAFETY: Precondition passed to caller
             unsafe {
@@ -654,7 +661,7 @@ impl<A: Allocator> RawVecInner<A> {
             // Inform the optimizer that the reservation has succeeded or wasn't needed
             hint::assert_unchecked(!self.needs_to_grow(len, additional, elem_layout));
         }
-        Ok(())
+        Ok(0)
     }
 
     /// # Safety
@@ -746,7 +753,7 @@ impl<A: Allocator> RawVecInner<A> {
         TryReserveError
     >
         requires len + additional > slf.cap
-        ensures s : Self[#new_slf]
+        ensures s : Self[#new_slf], new_slf == slf || new_slf >= len + additional
     ))]
     unsafe fn grow_amortized(
         &mut self,
