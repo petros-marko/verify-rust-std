@@ -391,6 +391,8 @@ impl<I: Iterator> IntoIterator for I {
 /// assert_eq!("MyCollection([5, 6, 7, 1, 2, 3])", format!("{c:?}"));
 /// ```
 #[stable(feature = "rust1", since = "1.0.0")]
+#[cfg_attr(flux, flux::assoc(fn can_extend_by(self: Self, additional: int) -> bool))]
+#[cfg_attr(flux, flux::assoc(fn post_extend_by(self: Self, additional: int, new_self: Self) -> bool))]
 pub trait Extend<A> {
     /// Extends a collection with the contents of an iterator.
     ///
@@ -422,6 +424,10 @@ pub trait Extend<A> {
     ///
     /// The default implementation does nothing.
     #[unstable(feature = "extend_one", issue = "72631")]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], additional: usize)
+        requires Self::can_extend_by(slf, additional)
+        ensures s : Self{ v : Self::post_extend_by(slf, additional, v) }
+    ))]
     fn extend_reserve(&mut self, additional: usize) {
         let _ = additional;
     }

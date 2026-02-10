@@ -1125,7 +1125,10 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// ```
     #[stable(feature = "rust1", since = "1.0.0")]
     #[cfg_attr(not(test), rustc_diagnostic_item = "vecdeque_reserve")]
-    #[cfg_attr(flux, flux::trusted(reason = "capacity change relies on extern specs"))]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], additional: usize)
+        requires slf.len <= isize::MAX - additional
+        ensures s : Self{ v : v.head >= slf.head && v.len == slf.len && v.cap >= slf.len + additional }
+    ))]
     pub fn reserve(&mut self, additional: usize) {
         let new_cap = self.len.checked_add(additional).expect("capacity overflow");
         let old_cap = self.capacity();
@@ -3395,6 +3398,7 @@ impl<T: Clone, A: Allocator> VecDeque<T, A> {
     /// ```
     #[cfg(not(no_global_oom_handling))]
     #[unstable(feature = "deque_extend_front", issue = "146975")]
+    #[cfg_attr(flux, flux::trusted(reason="not dealing with ranges yet"))]
     pub fn extend_from_within<R>(&mut self, src: R)
     where
         R: RangeBounds<usize>,
@@ -3437,6 +3441,7 @@ impl<T: Clone, A: Allocator> VecDeque<T, A> {
     /// ```
     #[cfg(not(no_global_oom_handling))]
     #[unstable(feature = "deque_extend_front", issue = "146975")]
+    #[cfg_attr(flux, flux::trusted(reason="not dealing with ranges yet"))]
     pub fn prepend_from_within<R>(&mut self, src: R)
     where
         R: RangeBounds<usize>,
@@ -3739,6 +3744,10 @@ impl<'a, T, A: Allocator> IntoIterator for &'a mut VecDeque<T, A> {
 }
 
 #[stable(feature = "rust1", since = "1.0.0")]
+#[cfg_attr(flux, flux::assoc(fn can_extend_by(self: Self, additional: int) -> bool { self.len <= isize::MAX - additional }))]
+#[cfg_attr(flux, flux::assoc(fn post_extend_by(self: Self, additional: int, new_self: Self) -> bool {
+    new_self.head >= self.head && new_self.len == self.len && new_self.cap >= self.len + additional
+}))]
 impl<T, A: Allocator> Extend<T> for VecDeque<T, A> {
     fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
         <Self as SpecExtend<T, I::IntoIter>>::spec_extend(self, iter.into_iter());
@@ -3750,6 +3759,10 @@ impl<T, A: Allocator> Extend<T> for VecDeque<T, A> {
     }
 
     #[inline]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], additional: usize)
+        requires Self::can_extend_by(slf, additional)
+        ensures s : Self{ v: Self::post_extend_by(slf, additional, v) }
+    ))]
     fn extend_reserve(&mut self, additional: usize) {
         self.reserve(additional);
     }
@@ -3765,6 +3778,10 @@ impl<T, A: Allocator> Extend<T> for VecDeque<T, A> {
 }
 
 #[stable(feature = "extend_ref", since = "1.2.0")]
+#[cfg_attr(flux, flux::assoc(fn can_extend_by(self: Self, additional: int) -> bool { self.len <= isize::MAX - additional }))]
+#[cfg_attr(flux, flux::assoc(fn post_extend_by(self: Self, additional: int, new_self: Self) -> bool {
+    new_self.head >= self.head && new_self.len == self.len && new_self.cap >= self.len + additional
+}))]
 impl<'a, T: 'a + Copy, A: Allocator> Extend<&'a T> for VecDeque<T, A> {
     fn extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) {
         self.spec_extend(iter.into_iter());
@@ -3776,6 +3793,10 @@ impl<'a, T: 'a + Copy, A: Allocator> Extend<&'a T> for VecDeque<T, A> {
     }
 
     #[inline]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], additional: usize)
+        requires Self::can_extend_by(slf, additional)
+        ensures s : Self{ v: Self::post_extend_by(slf, additional, v) }
+    ))]
     fn extend_reserve(&mut self, additional: usize) {
         self.reserve(additional);
     }

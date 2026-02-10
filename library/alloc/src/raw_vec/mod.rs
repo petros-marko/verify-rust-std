@@ -19,6 +19,8 @@ use crate::collections::TryReserveErrorKind::*;
 #[cfg(test)]
 mod tests;
 
+type Unit = ();
+
 // One central function responsible for reporting capacity overflows. This'll
 // ensure that the code generation related to these panics is minimal as there's
 // only one location which panics rather than a bunch throughout the module.
@@ -338,6 +340,10 @@ impl<T, A: Allocator> RawVec<T, A> {
     /// Aborts on OOM.
     #[cfg(not(no_global_oom_handling))]
     #[inline]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], len: usize, additional: usize)
+        requires len + additional <= isize::MAX
+        ensures s : Self{ v : v >= len + additional }
+    ))]
     pub(crate) fn reserve(&mut self, len: usize, additional: usize) {
         // SAFETY: All calls on self.inner pass T::LAYOUT as the elem_layout
         unsafe { self.inner.reserve(len, additional, T::LAYOUT) }
@@ -582,12 +588,19 @@ impl<A: Allocator> RawVecInner<A> {
     /// - `elem_layout`'s size must be a multiple of its alignment
     #[cfg(not(no_global_oom_handling))]
     #[inline]
+    #[cfg_attr(flux, flux::spec(fn(s : &mut Self[@slf], len: usize, additional: usize, elem_layout: Layout)
+        ensures s : Self{ v : v >= len + additional }
+    ))]
     unsafe fn reserve(&mut self, len: usize, additional: usize, elem_layout: Layout) {
         // Callers expect this function to be very cheap when there is already sufficient capacity.
         // Therefore, we move all the resizing and error-handling logic from grow_amortized and
         // handle_reserve behind a call, while making sure that this function is likely to be
         // inlined as just a comparison and a call if the comparison fails.
         #[cold]
+        #[cfg_attr(flux, flux::spec(fn(s : &mut Self[@slf], len: usize, additional: usize, elem_layout: Layout)
+            requires len + additional > slf.cap
+            ensures s : Self{ v : v >= len + additional }
+        ))]
         unsafe fn do_reserve_and_handle<A: Allocator>(
             slf: &mut RawVecInner<A>,
             len: usize,
@@ -728,13 +741,19 @@ impl<A: Allocator> RawVecInner<A> {
     ///   initially construct `self`
     /// - `elem_layout`'s size must be a multiple of its alignment
     /// - The sum of `len` and `additional` must be greater than the current capacity
-    #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], len: usize, additional: usize, elem_layout: Layout) -> Result<
+        i32{ v : new_slf >= len + additional }, 
+        TryReserveError
+    >
+        requires len + additional > slf.cap
+        ensures s : Self[#new_slf]
+    ))]
     unsafe fn grow_amortized(
         &mut self,
         len: usize,
         additional: usize,
         elem_layout: Layout,
-    ) -> Result<(), TryReserveError> {
+    ) -> Result<i32, TryReserveError> {
         // This is ensured by the calling contexts.
         debug_assert!(additional > 0);
 
@@ -759,7 +778,7 @@ impl<A: Allocator> RawVecInner<A> {
 
         // SAFETY: `finish_grow` would have failed if `cap > isize::MAX`
         unsafe { self.set_ptr_and_cap(ptr, cap) };
-        Ok(())
+        Ok(0)
     }
 
     /// # Safety

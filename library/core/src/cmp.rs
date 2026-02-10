@@ -1666,6 +1666,8 @@ where
 #[stable(feature = "rust1", since = "1.0.0")]
 #[rustc_diagnostic_item = "cmp_max"]
 #[rustc_const_unstable(feature = "const_cmp", issue = "143800")]
+#[cfg_attr(flux, flux::trusted(reason="will come back to this later"))]
+#[cfg_attr(flux, flux::spec(fn(T[@me], T[@other]) -> T[if other < me { me } else { other }]))]
 pub const fn max<T: [const] Ord + [const] Destruct>(v1: T, v2: T) -> T {
     v1.max(v2)
 }
