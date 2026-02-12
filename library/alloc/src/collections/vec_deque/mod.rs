@@ -247,6 +247,10 @@ impl<T, A: Allocator> VecDeque<T, A> {
 
     /// Moves an element out of the buffer
     #[inline]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], off: usize) -> T
+        requires off < slf.cap
+        ensures s : Self[slf]
+    ))]
     unsafe fn buffer_read(&mut self, off: usize) -> T {
         unsafe { ptr::read(self.ptr().add(off)) }
     }
@@ -276,6 +280,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
 
     /// Returns `true` if the buffer is at full capacity.
     #[inline]
+    #[cfg_attr(flux, flux::spec(fn(&Self[@slf]) -> bool[slf.len == slf.cap]))]
     fn is_full(&self) -> bool {
         self.len == self.capacity()
     }
@@ -631,13 +636,14 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// Assumes no wrapping around happens.
     /// Assumes capacity is sufficient.
     #[inline]
-    #[cfg_attr(flux, flux::trusted(reason = "iterator"))]
-    unsafe fn write_iter(
+    #[cfg_attr(flux, flux::trusted(reason="iterator"))]
+    unsafe fn write_iter<I>(
         &mut self,
         dst: usize,
-        iter: impl Iterator<Item = T>,
+        iter: I,
         written: &mut usize,
-    ) {
+    )
+    where I : Iterator<Item = T> {
         iter.enumerate().for_each(|(i, element)| unsafe {
             self.buffer_write(dst + i, element);
             *written += 1;
@@ -942,7 +948,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// `initialized.start` ≤ `initialized.end` ≤ `capacity`.
     #[inline]
     #[cfg(not(test))]
-    #[cfg_attr(flux, flux::trusted(reason="pointer & range"))]
+    #[cfg_attr(flux, flux::trusted(reason="range"))]
     pub(crate) unsafe fn from_contiguous_raw_parts_in(
         ptr: *mut T,
         initialized: Range<usize>,
@@ -1757,6 +1763,7 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// assert!(!deque.is_empty());
     /// ```
     #[stable(feature = "rust1", since = "1.0.0")]
+    #[cfg_attr(flux, flux::spec(fn(&Self[@slf]) -> bool[slf.len == 0]))]
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
@@ -2115,7 +2122,12 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// assert_eq!(d.pop_front(), None);
     /// ```
     #[stable(feature = "rust1", since = "1.0.0")]
-    #[cfg_attr(flux, flux::trusted(reason = "updates to head/len rely on pointer invariants"))]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf]) -> Option<T>
+        ensures s : Self[#new_slf], 
+                new_slf.cap == slf.cap, 
+                (slf.len == 0 => new_slf.head == slf.head && new_slf.len == slf.len),
+                (slf.len != 0 => new_slf.head < new_slf.cap && new_slf.len == slf.len - 1)
+    ))]
     pub fn pop_front(&mut self) -> Option<T> {
         if self.is_empty() {
             None
@@ -2145,7 +2157,12 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// assert_eq!(buf.pop_back(), Some(3));
     /// ```
     #[stable(feature = "rust1", since = "1.0.0")]
-    #[cfg_attr(flux, flux::trusted(reason = "updates to head/len rely on pointer invariants"))]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf]) -> Option<T>
+        ensures s : Self[#new_slf], 
+                new_slf.cap == slf.cap && new_slf.head == slf.head,
+                (slf.len == 0 => new_slf.len == slf.len),
+                (slf.len != 0 => new_slf.len == slf.len - 1)
+    ))]
     pub fn pop_back(&mut self) -> Option<T> {
         if self.is_empty() {
             None
@@ -2153,7 +2170,8 @@ impl<T, A: Allocator> VecDeque<T, A> {
             self.len -= 1;
             unsafe {
                 core::hint::assert_unchecked(self.len < self.capacity());
-                Some(self.buffer_read(self.to_physical_idx(self.len)))
+                let idx = self.to_physical_idx(self.len);
+                Some(self.buffer_read(idx))
             }
         }
     }
@@ -2215,6 +2233,10 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// assert_eq!(d.front(), Some(&2));
     /// ```
     #[stable(feature = "rust1", since = "1.0.0")]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], value: T)
+        requires slf.len < isize::MAX
+        ensures s : Self{ new_slf: new_slf.len == slf.len + 1 && new_slf.cap >= slf.cap }
+    ))]
     pub fn push_front(&mut self, value: T) {
         let _ = self.push_front_mut(value);
     }
@@ -2234,16 +2256,19 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// ```
     #[unstable(feature = "push_mut", issue = "135974")]
     #[must_use = "if you don't need a reference to the value, use `VecDeque::push_front` instead"]
-    #[cfg_attr(flux, flux::trusted(reason = "capacity and index reasoning relies on pointer invariants"))]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], value: T) -> &mut T
+        requires slf.len < isize::MAX
+        ensures s : Self{ new_slf: new_slf.len == slf.len + 1 && new_slf.cap >= slf.cap }
+    ))]
     pub fn push_front_mut(&mut self, value: T) -> &mut T {
         if self.is_full() {
             self.grow();
         }
-
         self.head = self.wrap_sub(self.head, 1);
         self.len += 1;
         // SAFETY: We know that self.head is within range of the deque.
-        unsafe { self.buffer_write(self.head, value) }
+        let head = self.head;
+        unsafe { self.buffer_write(head, value) }
     }
 
     /// Appends an element to the back of the deque.
@@ -2260,6 +2285,10 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// ```
     #[stable(feature = "rust1", since = "1.0.0")]
     #[rustc_confusables("push", "put", "append")]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], value: T)
+        requires slf.len < isize::MAX
+        ensures s : Self{ new_slf: new_slf.len == slf.len + 1 && new_slf.cap >= slf.cap }
+    ))]
     pub fn push_back(&mut self, value: T) {
         let _ = self.push_back_mut(value);
     }
@@ -2279,7 +2308,10 @@ impl<T, A: Allocator> VecDeque<T, A> {
     /// ```
     #[unstable(feature = "push_mut", issue = "135974")]
     #[must_use = "if you don't need a reference to the value, use `VecDeque::push_back` instead"]
-    #[cfg_attr(flux, flux::trusted(reason = "capacity and index reasoning relies on pointer invariants"))]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], value: T) -> &mut T
+        requires slf.len < isize::MAX
+        ensures s : Self{ new_slf: new_slf.len == slf.len + 1 && new_slf.cap >= slf.cap }
+    ))]
     pub fn push_back_mut(&mut self, value: T) -> &mut T {
         if self.is_full() {
             self.grow();
@@ -2784,7 +2816,10 @@ impl<T, A: Allocator> VecDeque<T, A> {
     // be called in cold paths.
     // This may panic or abort
     #[inline(never)]
-    #[cfg_attr(flux, flux::trusted(reason = "capacity growth relies on allocator behavior"))]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf])
+        requires slf.len == slf.cap
+        ensures s : Self{ new_slf: new_slf.head >= slf.head && new_slf.len == slf.len && new_slf.cap >= slf.cap + 1 && new_slf.cap >= 2*slf.cap}
+    ))]
     fn grow(&mut self) {
         // Extend or possibly remove this assertion when valid use-cases for growing the
         // buffer without it being full emerge
@@ -3754,24 +3789,32 @@ impl<'a, T, A: Allocator> IntoIterator for &'a mut VecDeque<T, A> {
 }
 
 #[stable(feature = "rust1", since = "1.0.0")]
-#[cfg_attr(flux, flux::assoc(fn can_extend_by(self: Self, additional: int) -> bool { self.len <= isize::MAX - additional }))]
-#[cfg_attr(flux, flux::assoc(fn post_extend_by(self: Self, additional: int, new_self: Self) -> bool {
-    new_self.head >= self.head && new_self.len == self.len && new_self.cap >= self.len + additional
-}))]
+#[cfg_attr(flux, flux::assoc(
+    fn can_reserve(self: Self, additional: int) -> bool { self.len <= isize::MAX - additional }
+    fn post_reserve(self: Self, additional: int, new_self: Self) -> bool {
+        new_self.head >= self.head && new_self.len == self.len && new_self.cap >= self.len + additional
+    }
+    fn can_extend_one(self: Self) -> bool { Self::can_reserve(self, 1) }
+    fn post_extend_one(self: Self, new_self: Self) -> bool { new_self.len == self.len + 1 && new_self.cap >= self.cap }
+))]
 impl<T, A: Allocator> Extend<T> for VecDeque<T, A> {
     fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
         <Self as SpecExtend<T, I::IntoIter>>::spec_extend(self, iter.into_iter());
     }
 
     #[inline]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], item: T)
+        requires Self::can_extend_one(slf)
+        ensures s : Self{ v: Self::post_extend_one(slf, v) }
+    ))]
     fn extend_one(&mut self, elem: T) {
         self.push_back(elem);
     }
 
     #[inline]
     #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], additional: usize)
-        requires Self::can_extend_by(slf, additional)
-        ensures s : Self{ v: Self::post_extend_by(slf, additional, v) }
+        requires Self::can_reserve(slf, additional)
+        ensures s : Self{ v: Self::post_reserve(slf, additional, v) }
     ))]
     fn extend_reserve(&mut self, additional: usize) {
         self.reserve(additional);
@@ -3788,24 +3831,32 @@ impl<T, A: Allocator> Extend<T> for VecDeque<T, A> {
 }
 
 #[stable(feature = "extend_ref", since = "1.2.0")]
-#[cfg_attr(flux, flux::assoc(fn can_extend_by(self: Self, additional: int) -> bool { self.len <= isize::MAX - additional }))]
-#[cfg_attr(flux, flux::assoc(fn post_extend_by(self: Self, additional: int, new_self: Self) -> bool {
-    new_self.head >= self.head && new_self.len == self.len && new_self.cap >= self.len + additional
-}))]
+#[cfg_attr(flux, flux::assoc(
+    fn can_reserve(self: Self, additional: int) -> bool { self.len <= isize::MAX - additional }
+    fn post_reserve(self: Self, additional: int, new_self: Self) -> bool {
+        new_self.head >= self.head && new_self.len == self.len && new_self.cap >= self.len + additional
+    }
+    fn can_extend_one(self: Self) -> bool { Self::can_reserve(self, 1) }
+    fn post_extend_one(self: Self, new_self: Self) -> bool { new_self.len == self.len + 1 && new_self.cap >= self.cap }
+))]
 impl<'a, T: 'a + Copy, A: Allocator> Extend<&'a T> for VecDeque<T, A> {
     fn extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) {
         self.spec_extend(iter.into_iter());
     }
 
     #[inline]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], item: &T)
+        requires Self::can_extend_one(slf)
+        ensures s : Self{ v: Self::post_extend_one(slf, v) }
+    ))]
     fn extend_one(&mut self, &elem: &'a T) {
         self.push_back(elem);
     }
 
     #[inline]
     #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], additional: usize)
-        requires Self::can_extend_by(slf, additional)
-        ensures s : Self{ v: Self::post_extend_by(slf, additional, v) }
+        requires Self::can_reserve(slf, additional)
+        ensures s : Self{ v: Self::post_reserve(slf, additional, v) }
     ))]
     fn extend_reserve(&mut self, additional: usize) {
         self.reserve(additional);

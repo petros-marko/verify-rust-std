@@ -262,7 +262,9 @@ impl<T, A: Allocator> RawVec<T, A> {
     /// If the `ptr` and `capacity` come from a `RawVec` created via `alloc`, then this is
     /// guaranteed.
     #[inline]
-    #[cfg_attr(flux, flux::trusted(reason="cannot mention pointers in spec"))]
+    #[cfg_attr(flux, flux::spec(fn(ptr: _, capacity: usize, alloc: A) -> Self[capacity]
+        requires capacity <= isize::MAX
+    ))]
     pub(crate) unsafe fn from_raw_parts_in(ptr: *mut T, capacity: usize, alloc: A) -> Self {
         // SAFETY: Precondition passed to the caller
         unsafe {
@@ -353,6 +355,9 @@ impl<T, A: Allocator> RawVec<T, A> {
     /// caller to ensure `len == self.capacity()`.
     #[cfg(not(no_global_oom_handling))]
     #[inline(never)]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf])
+        ensures s : Self{ new_slf: new_slf >= slf + 1 && new_slf >= 2 * slf }
+    ))]
     pub(crate) fn grow_one(&mut self) {
         // SAFETY: All calls on self.inner pass T::LAYOUT as the elem_layout
         unsafe { self.inner.grow_one(T::LAYOUT) }
@@ -529,7 +534,7 @@ impl<A: Allocator> RawVecInner<A> {
     }
 
     #[inline]
-    #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
+    #[cfg_attr(flux, flux::spec(fn(ptr: _, Cap[@cap], alloc: A) -> Self[cap]))]
     unsafe fn from_raw_parts_in(ptr: *mut u8, cap: Cap, alloc: A) -> Self {
         Self { ptr: unsafe { Unique::new_unchecked(ptr) }, cap, alloc }
     }
@@ -630,10 +635,13 @@ impl<A: Allocator> RawVecInner<A> {
     /// - `elem_layout`'s size must be a multiple of its alignment
     #[cfg(not(no_global_oom_handling))]
     #[inline]
-    #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], elem_layout: Layout)
+        ensures s : Self{ new_slf: new_slf >= slf + 1 && new_slf >= 2 * slf }
+    ))]
     unsafe fn grow_one(&mut self, elem_layout: Layout) {
         // SAFETY: Precondition passed to caller
-        if let Err(err) = unsafe { self.grow_amortized(self.cap.as_inner(), 1, elem_layout) } {
+        let cap = self.cap.as_inner();
+        if let Err(err) = unsafe { self.grow_amortized(cap, 1, elem_layout) } {
             handle_error(err);
         }
     }
@@ -749,11 +757,11 @@ impl<A: Allocator> RawVecInner<A> {
     /// - `elem_layout`'s size must be a multiple of its alignment
     /// - The sum of `len` and `additional` must be greater than the current capacity
     #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], len: usize, additional: usize, elem_layout: Layout) -> Result<
-        i32{ v : new_slf >= len + additional }, 
+        i32{ v : new_slf >= len + additional && new_slf >= 2 * slf }, 
         TryReserveError
     >
         requires len + additional > slf.cap
-        ensures s : Self[#new_slf], new_slf == slf || new_slf >= len + additional
+        ensures s : Self[#new_slf], new_slf == slf || (new_slf >= len + additional && new_slf >= 2 * slf)
     ))]
     unsafe fn grow_amortized(
         &mut self,

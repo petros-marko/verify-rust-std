@@ -597,14 +597,18 @@ use crate::{cmp, convert, hint, mem, slice};
 #[lang = "Option"]
 #[stable(feature = "rust1", since = "1.0.0")]
 #[allow(clippy::derived_hash_with_manual_eq)] // PartialEq is manually implemented equivalently
+#[cfg_attr(flux, flux::refined_by(is_some: bool))]
+#[cfg_attr(flux, flux::opaque)]
 pub enum Option<T> {
     /// No value.
     #[lang = "None"]
     #[stable(feature = "rust1", since = "1.0.0")]
+    #[cfg_attr(flux, flux::variant(Option<T>[false]))]
     None,
     /// Some value of type `T`.
     #[lang = "Some"]
     #[stable(feature = "rust1", since = "1.0.0")]
+    #[cfg_attr(flux, flux::variant((T) -> Option<T>[true]))]
     Some(#[stable(feature = "rust1", since = "1.0.0")] T),
 }
 

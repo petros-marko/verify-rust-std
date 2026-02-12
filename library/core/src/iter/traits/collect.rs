@@ -391,8 +391,12 @@ impl<I: Iterator> IntoIterator for I {
 /// assert_eq!("MyCollection([5, 6, 7, 1, 2, 3])", format!("{c:?}"));
 /// ```
 #[stable(feature = "rust1", since = "1.0.0")]
-#[cfg_attr(flux, flux::assoc(fn can_extend_by(self: Self, additional: int) -> bool))]
-#[cfg_attr(flux, flux::assoc(fn post_extend_by(self: Self, additional: int, new_self: Self) -> bool))]
+#[cfg_attr(flux, flux::assoc(
+    fn can_reserve(self: Self, additional: int) -> bool
+    fn post_reserve(self: Self, additional: int, new_self: Self) -> bool
+    fn can_extend_one(self: Self) -> bool
+    fn post_extend_one(self: Self, new_self: Self) -> bool
+))]
 pub trait Extend<A> {
     /// Extends a collection with the contents of an iterator.
     ///
@@ -416,6 +420,11 @@ pub trait Extend<A> {
 
     /// Extends a collection with exactly one element.
     #[unstable(feature = "extend_one", issue = "72631")]
+    #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], item: A)
+        requires Self::can_extend_one(slf)
+        ensures s : Self{ v : Self::post_extend_one(slf, v) }
+
+    ))]
     fn extend_one(&mut self, item: A) {
         self.extend(Some(item));
     }
@@ -425,8 +434,8 @@ pub trait Extend<A> {
     /// The default implementation does nothing.
     #[unstable(feature = "extend_one", issue = "72631")]
     #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], additional: usize)
-        requires Self::can_extend_by(slf, additional)
-        ensures s : Self{ v : Self::post_extend_by(slf, additional, v) }
+        requires Self::can_reserve(slf, additional)
+        ensures s : Self{ v : Self::post_reserve(slf, additional, v) }
     ))]
     fn extend_reserve(&mut self, additional: usize) {
         let _ = additional;
