@@ -329,6 +329,11 @@ pub unsafe trait Allocator {
     /// call the [`handle_alloc_error`] function, rather than directly invoking `panic!` or similar.
     ///
     /// [`handle_alloc_error`]: ../../alloc/alloc/fn.handle_alloc_error.html
+    #[cfg_attr(flux, flux::trusted(reason="making stuff up"))]
+    #[cfg_attr(flux, flux::spec(fn(self: &Self[@slf], ptr: NonNull<u8>, old_layout: Layout, new_layout: Layout) -> Result<NonNull<[u8]>, AllocError>
+        requires
+            new_layout.size <= old_layout.size
+    ))]
     unsafe fn shrink(
         &self,
         ptr: NonNull<u8>,

@@ -3,6 +3,9 @@
 // that the layout code gets called from many instantiations of the various
 // collections, resulting in having to optimize down excess IR multiple times.
 // Your performance intuition is useless. Run perf.
+#![flux::defs {
+    fn is_power_of_two(a: bitvec<64>) -> bool { a != 0 && (a & (a - 1)) == 0 }
+}]
 
 use safety::{Invariant, ensures, requires};
 
@@ -18,6 +21,10 @@ use crate::ptr::{Alignment, NonNull};
 #[allow(unused_imports)]
 use crate::ub_checks::Invariant;
 use crate::{assert_unsafe_precondition, fmt, mem};
+
+// pub fn is_power_of_two_impl(align: Alignment) -> bool {
+//     align.as_usize() != 0 && (align.as_usize() & (align.as_usize() - 1)) == 0
+// }
 
 /// Layout of a block of memory.
 ///
@@ -37,8 +44,13 @@ use crate::{assert_unsafe_precondition, fmt, mem};
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[lang = "alloc_layout"]
 #[derive(Invariant)]
+#[cfg_attr(flux, flux::refined_by(size: int, align: bitvec<64>))]
+#[cfg_attr(flux, flux::invariant(size <= usize::MAX ))]
+// TODO: need to write a flux invariant for the alignment 
+#[cfg_attr(flux, flux::invariant(is_power_of_two(align)) )]
 pub struct Layout {
     // size of the requested block of memory, measured in bytes.
+    #[cfg_attr(flux, flux::field(usize[size]))]
     size: usize,
 
     // alignment of the requested block of memory, measured in bytes.
@@ -48,6 +60,7 @@ pub struct Layout {
     //
     // (However, we do not analogously require `align >= sizeof(void*)`,
     //  even though that is *also* a requirement of `posix_memalign`.)
+    #[cfg_attr(flux, flux::field(Alignment[align]))]
     align: Alignment,
 }
 
@@ -71,6 +84,10 @@ impl Layout {
     #[ensures(|result| result.is_err() || size <= isize::MAX as usize - (align - 1))]
     #[ensures(|result| result.is_err() || result.as_ref().unwrap().size() == size)]
     #[ensures(|result| result.is_err() || result.as_ref().unwrap().align() == align)]
+    #[flux::spec(fn(size: usize, align: Alignment) -> Result<Layout, LayoutError>
+        requires is_power_of_two(align) == true
+        requires size <= usize::MAX - (align - 1)
+    )]
     pub const fn from_size_align(size: usize, align: usize) -> Result<Self, LayoutError> {
         if Layout::is_size_align_valid(size, align) {
             // SAFETY: Layout::is_size_align_valid checks the preconditions for this call.

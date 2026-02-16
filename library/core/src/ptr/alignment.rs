@@ -20,6 +20,8 @@ use crate::{cmp, fmt, hash, mem, num};
 #[repr(transparent)]
 // uses .0 instead of .as_usize() to permit proving as_usize so that its proof does not itself use
 // as_usize
+#[cfg_attr(flux, flux::opaque)]
+#[cfg_attr(flux, flux::refined_by(align: bitvec<64>))]
 #[invariant((self.0 as usize).is_power_of_two())]
 pub struct Alignment(AlignmentEnum);
 
@@ -105,6 +107,8 @@ impl Alignment {
     }
 
     /// Returns the alignment as a [`usize`].
+    #[flux::extern_spec]
+    #[flux::spec(fn(self: Alignment) -> usize)]
     #[unstable(feature = "ptr_alignment_type", issue = "102070")]
     #[inline]
     #[ensures(|result| result.is_power_of_two())]

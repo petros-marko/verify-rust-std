@@ -730,7 +730,7 @@ impl<A: Allocator> RawVecInner<A> {
     }
 
     #[inline]
-    #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
+    // #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
     #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], ptr: NonNull<[u8]>, cap: usize)
         requires cap <= isize::MAX
         ensures s: Self[cap]
@@ -881,9 +881,10 @@ impl<A: Allocator> RawVecInner<A> {
     /// # Safety
     /// `cap <= self.capacity()`
     #[cfg(not(no_global_oom_handling))]
-    #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
+    // #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
     #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], cap: usize, elem_layout: Layout) -> Result<(), TryReserveError>
-        ensures s: Self[cap]
+        requires cap <= slf.cap
+        ensures s : Self[#new_slf], new_slf == slf || new_slf == cap
     ))]
     unsafe fn shrink_unchecked(
         &mut self,
@@ -910,6 +911,7 @@ impl<A: Allocator> RawVecInner<A> {
                 // Layout cannot overflow here because it would have
                 // overflowed earlier when capacity was larger.
                 let new_size = elem_layout.size().unchecked_mul(cap);
+                // need to show new_layout size < layout size
                 let new_layout = Layout::from_size_align_unchecked(new_size, layout.align());
                 self.alloc
                     .shrink(ptr, layout, new_layout)
@@ -931,6 +933,9 @@ impl<A: Allocator> RawVecInner<A> {
     /// Ideally this function would take `self` by move, but it cannot because it exists to be
     /// called from a `Drop` impl.
     #[cfg_attr(flux, flux::trusted(reason="opaque struct"))]
+    // #[cfg_attr(flux, flux::spec(fn(s: &mut Self[@slf], elem_layout: Layout)
+    //     requires s : Self[0]
+    // ))]
     unsafe fn deallocate(&mut self, elem_layout: Layout) {
         // SAFETY: Precondition passed to caller
         if let Some((ptr, layout)) = unsafe { self.current_memory(elem_layout) } {
